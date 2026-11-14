@@ -1,0 +1,33 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+/* A single, very soft glow — no grid, no moving orbs. */
+.gradientOrb1 {
+  position: absolute;
+  top: -25%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--accent-soft) 0%, transparent 65%);
+  filter: blur(90px);
+  opacity: 0.55;
+}
+
+.gradientOrb2,
+.gradientOrb3,
+.gridOverlay {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gradientOrb1 {
+    transform: translateX(-50%);
+  }
+}

@@ -1,0 +1,272 @@
+.navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 clamp(20px, 4vw, 48px);
+  background: var(--nav-bg);
+  border-bottom: 1px solid transparent;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: border-color var(--transition-normal), background var(--transition-normal);
+}
+
+.scrolled {
+  border-bottom-color: var(--border-subtle);
+  background: var(--nav-bg-solid);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  text-decoration: none;
+  color: var(--text-primary);
+}
+
+.brandMark {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-variant);
+  box-shadow: 0 4px 16px var(--accent-glow);
+  flex-shrink: 0;
+  transition: transform var(--transition-normal);
+}
+
+.brandLogoImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.brand:hover .brandMark {
+  transform: scale(1.05);
+}
+
+.brandName {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.link {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition-fast), background var(--transition-fast);
+}
+
+.link:hover {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.linkActive {
+  color: var(--accent);
+  background: var(--surface-variant);
+  border: 1px solid var(--border-subtle);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.githubBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  transition: all var(--transition-fast);
+}
+
+.githubBtn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+}
+
+.downloadBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--btn-primary-bg);
+  color: var(--btn-primary-color);
+  transition: all var(--transition-fast);
+}
+
+.downloadBtn:hover {
+  background: var(--btn-primary-hover);
+  transform: translateY(-1px);
+}
+
+/* Theme tap button */
+.themeTapBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 6px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.themeTapBtn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-focus);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.themeTapBtn:active {
+  transform: scale(0.96);
+}
+
+.themeIconWrapper {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-variant);
+  flex-shrink: 0;
+}
+
+.themeIconImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.themeName {
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.cycleArrow {
+  opacity: 0.55;
+  transition: transform var(--transition-normal), opacity var(--transition-normal);
+  flex-shrink: 0;
+}
+
+.themeTapBtn:hover .cycleArrow {
+  opacity: 0.95;
+  transform: rotate(45deg);
+}
+
+@media (max-width: 680px) {
+  .themeName {
+    display: none;
+  }
+  .themeTapBtn {
+    padding: 5px;
+    gap: 0;
+  }
+  .cycleArrow {
+    display: none;
+  }
+}
+
+/* Mobile */
+.burger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  place-items: center;
+}
+
+.mobileMenu {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .links,
+  .right .githubBtn {
+    display: none;
+  }
+  .burger {
+    display: grid;
+  }
+  .mobileMenu {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: absolute;
+    top: var(--nav-height);
+    left: 0;
+    right: 0;
+    padding: 16px clamp(20px, 4vw, 48px) 20px;
+    background: var(--nav-bg-solid);
+    border-bottom: 1px solid var(--border-subtle);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+  .mobileMenu .link {
+    padding: 12px 14px;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .right .downloadBtn span {
+    display: none;
+  }
+  .right .downloadBtn {
+    padding: 9px 12px;
+  }
+}

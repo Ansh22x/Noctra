@@ -1,0 +1,152 @@
+import 'dart:async';
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Persisted playback settings (cross-platform via SharedPreferences).
+///
+/// Everything the Settings > Playback & Audio section exposes must survive an
+/// app restart. On Windows the process fully exits when the window closes, so
+/// any setting kept only in memory resets to defaults on relaunch — this store
+/// is the single persistence seam for those knobs.
+class PlaybackSettingsStore {
+  PlaybackSettingsStore._();
+  static final PlaybackSettingsStore instance = PlaybackSettingsStore._();
+
+  static const _kFade = 'noctra_setting_fade_enabled';
+  static const _kCrossfade = 'noctra_setting_crossfade_seconds';
+  static const _kAutoplayDelay = 'noctra_setting_autoplay_delay';
+  static const _kShuffle = 'noctra_setting_shuffle_enabled';
+  static const _kLoopMode = 'noctra_setting_loop_mode';
+  static const _kVolume = 'noctra_setting_volume';
+  static const _kAutoplayEnabled = 'noctra_setting_autoplay_enabled';
+  static const _kStreamQuality = 'noctra_setting_stream_quality';
+  static const _kPreferredCodec = 'noctra_setting_preferred_codec';
+  static const _kStreamingPolicy = 'noctra_setting_streaming_policy';
+  static const _kNormalizeVolume = 'noctra_setting_normalize_volume';
+  static const _kGapless = 'noctra_setting_gapless';
+  static const _kLyricsPref = 'noctra_setting_lyrics_preference';
+  static const _kHomeSections = 'noctra_setting_home_sections';
+
+  bool fadeEnabled = true;
+  int crossfadeSeconds = 3;
+  int autoplayDelaySeconds = 3;
+  bool shuffleEnabled = false;
+  String loopMode = 'off';
+  double volume = 1.0;
+  bool autoplayEnabled = true;
+  String streamQuality = 'lossless';
+  String preferredCodec = 'mp3';
+  String streamingPolicy = 'smartNetwork';
+  bool normalizeVolume = true;
+  bool gaplessPlayback = true;
+  String lyricsPreference = 'English / Global (Standard)';
+
+  /// Home-screen section visibility (declutter). Keys are section ids used
+  /// by HomeScreen; anything missing from the stored map defaults to shown,
+  /// except [kDefaultHidden] sections which are hidden by default.
+  static const kDefaultHidden = <String>{'vibeChips'};
+  Map<String, bool> homeSections = {};
+
+  bool isHomeSectionVisible(String id) {
+    final v = homeSections[id];
+    return v ?? !kDefaultHidden.contains(id);
+  }
+
+  void setHomeSectionVisible(String id, bool visible) {
+    homeSections[id] = visible;
+    save(homeSections: homeSections);
+  }
+
+  Future<void> load() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      fadeEnabled = prefs.getBool(_kFade) ?? true;
+      crossfadeSeconds = prefs.getInt(_kCrossfade) ?? 3;
+      autoplayDelaySeconds = prefs.getInt(_kAutoplayDelay) ?? 3;
+      shuffleEnabled = prefs.getBool(_kShuffle) ?? false;
+      loopMode = prefs.getString(_kLoopMode) ?? 'off';
+      volume = (prefs.getDouble(_kVolume) ?? 1.0).clamp(0.0, 1.0);
+      autoplayEnabled = prefs.getBool(_kAutoplayEnabled) ?? true;
+      streamQuality = prefs.getString(_kStreamQuality) ?? 'lossless';
+      preferredCodec = prefs.getString(_kPreferredCodec) ?? 'mp3';
+      streamingPolicy = prefs.getString(_kStreamingPolicy) ?? 'smartNetwork';
+      normalizeVolume = prefs.getBool(_kNormalizeVolume) ?? true;
+      gaplessPlayback = prefs.getBool(_kGapless) ?? true;
+      lyricsPreference =
+          prefs.getString(_kLyricsPref) ?? 'English / Global (Standard)';
+      final rawSections = prefs.getString(_kHomeSections);
+      if (rawSections != null && rawSections.isNotEmpty) {
+        try {
+          final decoded = const JsonDecoder().convert(rawSections);
+          if (decoded is Map) {
+            homeSections = decoded
+                .map((k, v) => MapEntry(k.toString(), v == true));
+          }
+        } catch (_) {}
+      }
+    } catch (_) {
+      // Defaults already set; persistence failure must never crash startup.
+    }
+  }
+
+  /// Updates in-memory values immediately (synchronous reads stay correct)
+  /// and fires a best-effort async persist.
+  void save({
+    bool? fadeEnabled,
+    int? crossfadeSeconds,
+    int? autoplayDelaySeconds,
+    bool? shuffleEnabled,
+    String? loopMode,
+    double? volume,
+    bool? autoplayEnabled,
+    String? streamQuality,
+    String? preferredCodec,
+    String? streamingPolicy,
+    bool? normalizeVolume,
+    bool? gaplessPlayback,
+    String? lyricsPreference,
+    Map<String, bool>? homeSections,
+  }) {
+    if (fadeEnabled != null) this.fadeEnabled = fadeEnabled;
+    if (crossfadeSeconds != null) this.crossfadeSeconds = crossfadeSeconds;
+    if (autoplayDelaySeconds != null) {
+      this.autoplayDelaySeconds = autoplayDelaySeconds;
+    }
+    if (shuffleEnabled != null) this.shuffleEnabled = shuffleEnabled;
+    if (loopMode != null) this.loopMode = loopMode;
+    if (volume != null) this.volume = volume.clamp(0.0, 1.0);
+    if (autoplayEnabled != null) this.autoplayEnabled = autoplayEnabled;
+    if (streamQuality != null) this.streamQuality = streamQuality;
+    if (preferredCodec != null) this.preferredCodec = preferredCodec;
+    if (streamingPolicy != null) this.streamingPolicy = streamingPolicy;
+    if (normalizeVolume != null) this.normalizeVolume = normalizeVolume;
+    if (gaplessPlayback != null) this.gaplessPlayback = gaplessPlayback;
+    if (lyricsPreference != null) this.lyricsPreference = lyricsPreference;
+    if (homeSections != null) this.homeSections = homeSections;
+    unawaitedPersist();
+  }
+
+  Future<void> unawaitedPersist() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_kFade, fadeEnabled);
+    await prefs.setInt(_kCrossfade, crossfadeSeconds);
+    await prefs.setInt(_kAutoplayDelay, autoplayDelaySeconds);
+    await prefs.setBool(_kShuffle, shuffleEnabled);
+    await prefs.setString(_kLoopMode, loopMode);
+    await prefs.setDouble(_kVolume, volume);
+    await prefs.setBool(_kAutoplayEnabled, autoplayEnabled);
+    await prefs.setString(_kStreamQuality, streamQuality);
+    await prefs.setString(_kPreferredCodec, preferredCodec);
+    await prefs.setString(_kStreamingPolicy, streamingPolicy);
+    await prefs.setBool(_kNormalizeVolume, normalizeVolume);
+    await prefs.setBool(_kGapless, gaplessPlayback);
+    await prefs.setString(_kLyricsPref, lyricsPreference);
+    if (homeSections.isNotEmpty) {
+      await prefs.setString(
+          _kHomeSections, const JsonEncoder().convert(homeSections));
+    }
+    } catch (_) {}
+  }
+}

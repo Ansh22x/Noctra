@@ -1,0 +1,132 @@
+import 'package:flutter/material.dart';
+import '../../../services/lyrics/universal_lyrics_transliteration_engine.dart';
+import '../../../core/theme/noir_theme.dart';
+
+class LyricsScriptSelector extends StatelessWidget {
+  final List<ScriptOption> options;
+  final String selectedScript;
+  final bool isDark;
+  final ValueChanged<String> onSelectScript;
+
+  const LyricsScriptSelector({
+    super.key,
+    required this.options,
+    required this.selectedScript,
+    required this.isDark,
+    required this.onSelectScript,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    if (options.length <= 1) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 10,
+      left: 0,
+      right: 0,
+      child: SizedBox(
+        height: 36,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          itemCount: options.length,
+          itemBuilder: (context, index) {
+            final opt = options[index];
+            final sel = selectedScript == opt.code;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: GestureDetector(
+                onTap: () => onSelectScript(opt.code),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: sel
+                        ? (t.primaryText)
+                        : (isDark
+                            ? const Color(0x33FFFFFF)
+                            : const Color(0x1F000000)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    opt.label,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: sel
+                          ? (t.primaryText)
+                          : (t.secondaryText),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class LyricsSyncFloatingButton extends StatelessWidget {
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const LyricsSyncFloatingButton({
+    super.key,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    return Positioned(
+      bottom: 16,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.92)
+                  : Colors.black.withValues(alpha: 0.88),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.vertical_align_center_rounded,
+                  size: 14,
+                  color: t.primaryText,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Sync with Song',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: t.primaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

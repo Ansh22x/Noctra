@@ -1,0 +1,485 @@
+name: Cross-Platform Native Packaging & Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'pubspec.yaml'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Desired Version (leave empty to auto-detect from pubspec.yaml)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Extract Version & Changelog
+    runs-on: ubuntu-latest
+    outputs:
+      app_version: ${{ steps.resolve.outputs.version }}
+      build_number: ${{ steps.resolve.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: resolve
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && -n "${{ github.event.inputs.version }}" ]]; then
+            RAW_VER="${{ github.event.inputs.version }}"
+          elif [[ "${{ github.ref_type }}" == "tag" ]]; then
+            RAW_VER="${{ github.ref_name }}"
+          else
+            RAW_VER=$(grep '^version:' pubspec.yaml | head -n1 | cut -d ' ' -f2 | cut -d '+' -f1)
+          fi
+          CLEAN_VER="${RAW_VER#v}"
+          echo "version=${CLEAN_VER}" >> "$GITHUB_OUTPUT"
+          
+          BUILD_NUM=$(grep '^version:' pubspec.yaml | head -n1 | cut -d '+' -f2)
+          if [[ -z "$BUILD_NUM" || "$BUILD_NUM" == "$RAW_VER" ]]; then
+            BUILD_NUM=${{ github.run_number }}
+          fi
+          echo "build_number=${BUILD_NUM}" >> "$GITHUB_OUTPUT"
+          echo "Determined release version: ${CLEAN_VER}, build number: ${BUILD_NUM}"
+
+          python3 -c "
+          import re
+          ver = '${CLEAN_VER}'
+          try:
+              with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
+                  content = f.read()
+              pattern = rf'(## v{re.escape(ver)}.*?(?=\n## v|\Z))'
+              match = re.search(pattern, content, re.DOTALL)
+              if match:
+                  notes = match.group(1).strip()
+              else:
+                  notes = f'## v{ver}\n\nAutomated multi-platform release for Noctra v{ver}.'
+          except Exception as e:
+              notes = f'## v{ver}\n\nAutomated multi-platform release for Noctra v{ver}.'
+
+          with open('extracted_notes.md', 'w', encoding='utf-8') as out:
+              out.write(notes)
+          "
+
+      - name: Archive Extracted Release Notes
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: extracted_notes.md
+
+  build-android:
+    name: Build Android (Universal, Split-ABI & AAB)
+    needs: version
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+      NOCTRA_ENFORCE_SIGNING: "true"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned: this project's Gradle/AGP toolchain is verified against
+          # this SDK, and newer stable releases require a newer Android Gradle
+          # Plugin than android/settings.gradle.kts pins.
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Setup Android Release Signing Keystore
+        run: |
+          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/noctra-release.keystore
+            cat << EOF > android/key.properties
+          storePassword=${{ secrets.NOCTRA_KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.NOCTRA_KEY_PASSWORD }}
+          keyAlias=${{ secrets.NOCTRA_KEY_ALIAS }}
+          EOF
+            echo "Release keystore decoded and android/key.properties configured."
+          else
+            echo "::error ::ANDROID_KEYSTORE_BASE64 secret not found; production release build cannot be signed with debug key."
+            exit 1
+          fi
+
+      - name: Build Universal APK
+        run: |
+          flutter build apk --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number="${{ env.BUILD_NUMBER }}"
+        env:
+          NOCTRA_KEYSTORE_PASSWORD: ${{ secrets.NOCTRA_KEYSTORE_PASSWORD }}
+          NOCTRA_KEY_PASSWORD: ${{ secrets.NOCTRA_KEY_PASSWORD }}
+          NOCTRA_KEY_ALIAS: ${{ secrets.NOCTRA_KEY_ALIAS }}
+
+      - name: Build Split per-ABI APKs
+        run: |
+          flutter build apk --release --split-per-abi \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number="${{ env.BUILD_NUMBER }}"
+        env:
+          NOCTRA_KEYSTORE_PASSWORD: ${{ secrets.NOCTRA_KEYSTORE_PASSWORD }}
+          NOCTRA_KEY_PASSWORD: ${{ secrets.NOCTRA_KEY_PASSWORD }}
+          NOCTRA_KEY_ALIAS: ${{ secrets.NOCTRA_KEY_ALIAS }}
+
+      - name: Build Google Play App Bundle (AAB)
+        run: |
+          flutter build appbundle --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number="${{ env.BUILD_NUMBER }}"
+        env:
+          NOCTRA_KEYSTORE_PASSWORD: ${{ secrets.NOCTRA_KEYSTORE_PASSWORD }}
+          NOCTRA_KEY_PASSWORD: ${{ secrets.NOCTRA_KEY_PASSWORD }}
+          NOCTRA_KEY_ALIAS: ${{ secrets.NOCTRA_KEY_ALIAS }}
+
+      - name: Organize Android Artifacts
+        run: |
+          mkdir -p android_artifacts
+          # Filenames must match the `Noctra-<version>-<abi>.apk` convention the
+          # release manifest writer (tool/write_release_manifest.sh) expects.
+          cp build/app/outputs/flutter-apk/app-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-universal.apk
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-arm64-v8a.apk
+          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-armeabi-v7a.apk
+          cp build/app/outputs/flutter-apk/app-x86_64-release.apk android_artifacts/Noctra-${{ env.APP_VERSION }}-x86_64.apk
+          cp build/app/outputs/bundle/release/app-release.aab android_artifacts/Noctra-${{ env.APP_VERSION }}.aab
+          ls -lh android_artifacts/
+
+      - name: Archive Android Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Android
+          path: android_artifacts/
+
+  build-windows:
+    name: Build Windows (.exe Installer)
+    needs: version
+    # A broken desktop/iOS build must not hold back the Android APK release.
+    continue-on-error: true
+    runs-on: windows-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned: this project's Gradle/AGP toolchain is verified against
+          # this SDK, and newer stable releases require a newer Android Gradle
+          # Plugin than android/settings.gradle.kts pins.
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Verify Quality & Architecture
+        run: |
+          flutter analyze
+          flutter test test/architecture_boundaries_test.dart
+
+      - name: Build Windows Release
+        run: |
+          flutter build windows --release `
+            --build-name="${{ env.APP_VERSION }}" `
+            --build-number=${{ env.BUILD_NUMBER }}
+
+      - name: Create Inno Setup Installer Script
+        shell: pwsh
+        run: |
+          $issContent = @"
+          [Setup]
+          AppName=Noctra
+          AppVersion=$($env:APP_VERSION)
+          DefaultDirName={autopf}\Noctra
+          DefaultGroupName=Noctra
+          OutputDir=installer_out
+          OutputBaseFilename=Noctra-$($env:APP_VERSION)-Setup-x64
+          Compression=lzma2
+          SolidCompression=yes
+          ArchitecturesInstallIn64BitMode=x64
+          SetupIconFile=windows\runner\resources\app_icon.ico
+          UninstallDisplayIcon={app}\noctra.exe
+
+          [Files]
+          Source: "build\windows\x64\runner\Release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+          [Icons]
+          Name: "{group}\Noctra"; Filename: "{app}\noctra.exe"; IconFilename: "{app}\noctra.exe"
+          Name: "{autodesktop}\Noctra"; Filename: "{app}\noctra.exe"; IconFilename: "{app}\noctra.exe"
+
+          [Run]
+          Filename: "{app}\noctra.exe"; Description: "{cm:LaunchProgram,Noctra}"; Flags: nowait postinstall skipifsilent
+          "@
+          Set-Content -Path "installer.iss" -Value $issContent
+
+      - name: Compile Inno Setup Installer (.exe)
+        shell: pwsh
+        run: |
+          if (-not (Test-Path "C:\Program Files (x86)\Inno Setup 6\ISCC.exe")) {
+            choco install innosetup --yes --no-progress
+          }
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+      - name: Archive Windows Installer (.exe)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Windows
+          path: installer_out/Noctra-${{ env.APP_VERSION }}-Setup-x64.exe
+
+  build-linux:
+    name: Build Linux (.deb Package)
+    needs: version
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux Build Tools & Libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev \
+            libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-libav
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned: this project's Gradle/AGP toolchain is verified against
+          # this SDK, and newer stable releases require a newer Android Gradle
+          # Plugin than android/settings.gradle.kts pins.
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Enable Linux Desktop
+        run: flutter config --enable-linux-desktop
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build Linux Release
+        run: |
+          flutter build linux --release \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ env.BUILD_NUMBER }}
+
+      - name: Package Native Debian Package (.deb)
+        run: |
+          mkdir -p deb-pkg/DEBIAN
+          mkdir -p deb-pkg/usr/lib/noctra
+          mkdir -p deb-pkg/usr/bin
+          mkdir -p deb-pkg/usr/share/applications
+          mkdir -p deb-pkg/usr/share/pixmaps
+
+          cp -r build/linux/x64/release/bundle/* deb-pkg/usr/lib/noctra/
+          ln -s /usr/lib/noctra/noctra deb-pkg/usr/bin/noctra
+          cp assets/images/logo_noctra_noir_white.png deb-pkg/usr/share/pixmaps/noctra.png
+
+          cat << EOF > deb-pkg/DEBIAN/control
+          Package: noctra
+          Version: ${{ env.APP_VERSION }}
+          Section: sound
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Noctra Project <https://github.com/Ansh22x/Noctra>
+          Description: Noctra - Autonomous On-Device Music Player
+           High-resolution lossless player with neural taste modeling and local-first library.
+          EOF
+
+          cat << 'EOF' > deb-pkg/usr/share/applications/noctra.desktop
+          [Desktop Entry]
+          Name=Noctra
+          Comment=Autonomous On-Device Music Player
+          Exec=/usr/bin/noctra
+          Icon=noctra
+          Terminal=false
+          Type=Application
+          Categories=AudioVideo;Audio;Player;
+          EOF
+
+          dpkg-deb --build deb-pkg "noctra_${{ env.APP_VERSION }}_amd64.deb"
+
+      - name: Archive Linux Package (.deb)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-Linux-deb
+          path: "noctra_${{ env.APP_VERSION }}_amd64.deb"
+
+  build-ios:
+    name: Build iOS (.ipa Sideload Package)
+    needs: version
+    continue-on-error: true
+    runs-on: macos-latest
+    env:
+      APP_VERSION: ${{ needs.version.outputs.app_version }}
+      BUILD_NUMBER: ${{ needs.version.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          # Pinned: this project's Gradle/AGP toolchain is verified against
+          # this SDK, and newer stable releases require a newer Android Gradle
+          # Plugin than android/settings.gradle.kts pins.
+          flutter-version: '3.47.2'
+          cache: true
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build iOS Application Bundle
+        run: |
+          flutter build ios --release --no-codesign \
+            --build-name="${{ env.APP_VERSION }}" \
+            --build-number=${{ env.BUILD_NUMBER }}
+
+      - name: Package Sideloadable IPA (.ipa)
+        run: |
+          mkdir -p Payload
+          cp -r build/ios/iphoneos/Runner.app Payload/
+          zip -qr "Noctra-${{ env.APP_VERSION }}.ipa" Payload
+
+      - name: Archive iOS Sideload Package (.ipa)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Noctra-${{ env.APP_VERSION }}-iOS-ipa
+          path: "Noctra-${{ env.APP_VERSION }}.ipa"
+
+  publish-release:
+    name: Publish Official GitHub Release
+    needs: [version, build-android, build-windows, build-linux, build-ios]
+    # Optional platform jobs are continue-on-error, so publish whatever built.
+    if: always() && !cancelled() && needs.build-android.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Extracted Release Notes
+        uses: actions/download-artifact@v4
+        with:
+          name: release-notes
+          path: release_meta/
+
+      - name: Download Android Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Android
+          path: release_dist/
+
+      - name: Download Windows Artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Windows
+          path: release_dist/
+
+      - name: Download Linux Artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-Linux-deb
+          path: release_dist/
+
+      - name: Download iOS Artifacts
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: Noctra-${{ needs.version.outputs.app_version }}-iOS-ipa
+          path: release_dist/
+
+      - name: Generate Update Manifest (per-ABI packages + pinned SHA-256)
+        env:
+          SIGNING_KEY_B64: ${{ secrets.NOCTRA_UPDATE_MANIFEST_SIGNING_KEY_BASE64 }}
+        run: |
+          if [ -n "$SIGNING_KEY_B64" ]; then
+            printf '%s' "$SIGNING_KEY_B64" | base64 -d > "$RUNNER_TEMP/manifest-signing.pem"
+            echo "Signing manifest with the configured key."
+            export NOCTRA_UPDATE_MANIFEST_SIGNING_KEY="$RUNNER_TEMP/manifest-signing.pem"
+          fi
+          bash tool/write_release_manifest.sh \
+            release_dist \
+            "${{ needs.version.outputs.app_version }}" \
+            "${{ needs.version.outputs.build_number }}"
+
+      - name: Generate Checksums & Formatted Release Notes
+        run: |
+          # Hash every published file, including the manifest, but never the
+          # checksum file itself.
+          cd release_dist
+          rm -f SHA256SUMS.txt
+          for f in *; do
+            [ -f "$f" ] && sha256sum "$f"
+          done | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
+
+          cat release_meta/extracted_notes.md > release_body.md
+          cat << 'EOF' >> release_body.md
+
+          ---
+
+          ### Download guide
+
+          **Android** — pick the APK that matches your device. Android 8.0 (API 26) or newer is required.
+
+          | Package | Architecture | Use it when |
+          |---|---|---|
+          | `Noctra-${{ needs.version.outputs.app_version }}-arm64-v8a.apk` | 64-bit ARM | **Recommended.** Every phone and tablet sold since ~2016 |
+          | `Noctra-${{ needs.version.outputs.app_version }}-armeabi-v7a.apk` | 32-bit ARM | Older 32-bit devices only |
+          | `Noctra-${{ needs.version.outputs.app_version }}-x86_64.apk` | x86_64 | Android emulators, ChromeOS, WSA |
+          | `Noctra-${{ needs.version.outputs.app_version }}-universal.apk` | All ABIs | Unsure about your ABI, or sideloading one file everywhere |
+          | `Noctra-${{ needs.version.outputs.app_version }}.aab` | Google Play | Play Store upload only — cannot be installed directly |
+
+          The in-app updater installs the right ARM/x86 APK for the device automatically and verifies it
+          against the pinned digest in `noctra-update-manifest.json`.
+
+          ### Native Platform Downloads
+
+          | Platform | Package | Architecture | Description |
+          |---|---|---|---|
+          | **Windows** | `Noctra-${{ needs.version.outputs.app_version }}-Setup-x64.exe` | x86_64 / x64 | Standalone 1-Click Installer (Inno Setup) |
+          | **Linux** | `noctra_${{ needs.version.outputs.app_version }}_amd64.deb` | x86_64 / amd64 | Debian / Ubuntu native package (`sudo dpkg -i`) |
+          | **iOS** | `Noctra-${{ needs.version.outputs.app_version }}.ipa` | ARM64 / iPhone & iPad | Sideloadable via AltStore / SideStore / TrollStore |
+
+          ### Integrity
+
+          Every file above is listed in `SHA256SUMS.txt`; check a download with
+          `sha256sum -c SHA256SUMS.txt --ignore-missing`. `noctra-update-manifest.json`
+          pins the per-ABI filename and digest the in-app updater trusts.
+          EOF
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Noctra v${{ needs.version.outputs.app_version }}"
+          tag_name: "v${{ needs.version.outputs.app_version }}"
+          target_commitish: ${{ github.sha }}
+          body_path: release_body.md
+          files: |
+            release_dist/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
