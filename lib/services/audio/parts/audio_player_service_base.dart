@@ -165,6 +165,10 @@ abstract class AudioPlayerServiceBase {
 
   /// Canonical target volume — never hardcode 1.0.
   double _targetVolume = 1.0;
+  double get targetVolume => _targetVolume;
+  final StreamController<double> _targetVolumeController =
+      StreamController<double>.broadcast();
+  Stream<double> get targetVolumeStream => _targetVolumeController.stream;
 
   // ─── Cross-Mixin Contracts ──────────────────────────────────────────────
 

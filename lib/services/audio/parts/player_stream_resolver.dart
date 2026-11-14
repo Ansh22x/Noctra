@@ -136,12 +136,24 @@ mixin PlayerStreamResolverMixin on AudioPlayerServiceBase {
     }
     final nextIndex = _currentIndex + 1;
     final gen = ++_preloadingGeneration;
+    final epoch = _playSessionEpoch;
+    final rev = _queueRevision;
 
+    // Buffer delay: give the active song 3.5s of uninterrupted network & decoding bandwidth
+    Future.delayed(const Duration(milliseconds: 3500), () {
+      if (gen != _preloadingGeneration ||
+          epoch != _playSessionEpoch ||
+          rev != _queueRevision) {
+        return;
+      }
+      _executePreloadNext(nextIndex, gen, epoch, rev);
+    });
+  }
+
+  void _executePreloadNext(int nextIndex, int gen, int epoch, int rev) {
     if (nextIndex >= _queue.length) {
       if (_isAutoplayEnabled && _currentSong != null) {
         _preloading = true;
-        final epoch = _playSessionEpoch;
-        final rev = _queueRevision;
         _getRadioQueue(_currentSong!).then((similar) {
           if (gen != _preloadingGeneration ||
               epoch != _playSessionEpoch ||
@@ -187,8 +199,6 @@ mixin PlayerStreamResolverMixin on AudioPlayerServiceBase {
     }
 
     _preloading = true;
-    final epoch = _playSessionEpoch;
-    final rev = _queueRevision;
     _prepareNextPlayer(_queue[nextIndex], epoch, rev).whenComplete(() {
       if (gen == _preloadingGeneration) {
         _preloading = false;

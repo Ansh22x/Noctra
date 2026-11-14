@@ -165,8 +165,7 @@ final positionStreamProvider = StreamProvider<Duration>((ref) {
 // Volume Stream
 final volumeStreamProvider = StreamProvider<double>((ref) {
   final player = ref.watch(audioPlayerServiceProvider);
-  ref.watch(playerSwapStreamProvider);
-  return _seedThen(player.player.volume, player.player.volumeStream);
+  return _seedThen(player.targetVolume, player.targetVolumeStream);
 });
 
 // Queue

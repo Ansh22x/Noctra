@@ -89,9 +89,9 @@ class AudioPlayerService extends AudioPlayerServiceBase
       'one' => LoopMode.one,
       _ => LoopMode.off,
     };
-    _targetVolume = s.volume;
+    _targetVolume = s.volume > 0.01 ? s.volume : 1.0;
     _isAutoplayEnabled = s.autoplayEnabled;
-    _player.setVolume(s.volume);
+    _player.setVolume(_targetVolume);
   }
 
   /// Re-applies persisted playback settings from disk.

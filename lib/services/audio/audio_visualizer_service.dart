@@ -48,21 +48,15 @@ class AudioVisualizerService {
         final playerService = AudioPlayerService();
         final initialSessionId = playerService.player.androidAudioSessionId;
         if (initialSessionId != null && initialSessionId > 0) {
-          _startListening(initialSessionId);
+          _currentSessionId = initialSessionId;
+          if (_subscriberCount > 0) _startListening(initialSessionId);
         }
         _sessionSub?.cancel();
         _sessionSub = playerService.player.androidAudioSessionIdStream
             .listen((sessionId) {
-          if (sessionId != null &&
-              sessionId > 0 &&
-              sessionId != _currentSessionId) {
-            _startListening(sessionId);
-          }
-          // Forward every session change (even no-op) to the
-          // effects engine so equalizer/bass/etc. follow the
-          // player swap. The native side is idempotent so the
-          // no-op duplicates are free.
           if (sessionId != null && sessionId > 0) {
+            _currentSessionId = sessionId;
+            if (_subscriberCount > 0) _startListening(sessionId);
             _notifyEffectsSessionChanged(sessionId);
           }
         });
@@ -89,12 +83,19 @@ class AudioVisualizerService {
 
   void subscribe() {
     _subscriberCount++;
-    if (_subscriberCount == 1) _startFallbackLoop();
+    if (_subscriberCount == 1) {
+      if (_currentSessionId != null && _currentSessionId! > 0) {
+        _startListening(_currentSessionId!);
+      }
+      _startFallbackLoop();
+    }
   }
 
   void unsubscribe() {
     _subscriberCount = max(0, _subscriberCount - 1);
     if (_subscriberCount == 0) {
+      _subscription?.cancel();
+      _subscription = null;
       _fallbackTicker?.cancel();
       _fallbackTicker = null;
     }

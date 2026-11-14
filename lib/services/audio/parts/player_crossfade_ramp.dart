@@ -4,46 +4,34 @@ part of '../audio_player_service.dart';
 mixin PlayerCrossfadeRampMixin on AudioPlayerServiceBase {
   @override
   Future<void> _fadeIn({Duration? duration}) async {
-    // CRITICAL: every new player is prepared at volume 0.0 (see
-    // _preparePlayer). Even with fade transitions disabled this method must
-    // guarantee the volume lands on _targetVolume, otherwise each track
-    // change starts silently and audio only returns after the user moves the
-    // volume slider ("sound cuts, I have to click on volume").
     final vEpoch = ++_volumeEpoch;
     final p = _player;
     if (!_isFadeEnabled) {
-      if (_volumeEpoch == vEpoch && identical(p, _player)) {
+      if (identical(p, _player)) {
         try {
           await p.setVolume(_targetVolume);
         } catch (_) {}
       }
       return;
     }
-    // A duck (phone call) that began right at a track boundary can leave the
-    // new player's ramp fighting a stale duck state; clearing the flag here
-    // means the ramp below always converges on the real target volume.
     _isDucked = false;
-    final dur = duration ?? const Duration(milliseconds: 400);
-    const steps = 20;
+    final dur = duration ?? const Duration(milliseconds: 250);
+    const steps = 6;
     final stepDelay = Duration(
-        milliseconds: (dur.inMilliseconds / steps).round().clamp(10, 200));
+        milliseconds: (dur.inMilliseconds / steps).round().clamp(15, 60));
     try {
       for (var i = 1; i <= steps; i++) {
         if (_volumeEpoch != vEpoch || !identical(p, _player)) {
-          return;
+          break;
         }
         final t = i / steps;
         await p.setVolume(t * t * _targetVolume);
         await Future.delayed(stepDelay);
       }
-      // Final guarantee: even if the loop was raced at the last step, ensure
-      // the target volume is committed once more.
-      if (_volumeEpoch == vEpoch && identical(p, _player)) {
-        await p.setVolume(_targetVolume);
-      }
     } catch (e) {
       NoctraLogger.w('Fade-in failed', e);
-      if (_volumeEpoch == vEpoch && identical(p, _player)) {
+    } finally {
+      if (identical(p, _player) && !_isDucked) {
         try {
           await p.setVolume(_targetVolume);
         } catch (_) {}
