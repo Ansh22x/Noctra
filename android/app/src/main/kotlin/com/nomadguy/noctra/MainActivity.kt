@@ -29,6 +29,33 @@ class MainActivity : AudioServiceActivity() {
     private val visualizerDelegate = VisualizerChannelDelegate(effectsEngine)
     private val assistantDelegate = AssistantIntentDelegate()
 
+    override fun onCreate(savedInstanceState: android.os.Bundle?) {
+        super.onCreate(savedInstanceState)
+        unlockHighRefreshRate()
+    }
+
+    private fun unlockHighRefreshRate() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            try {
+                @Suppress("DEPRECATION")
+                val modes = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                    display?.supportedModes
+                } else {
+                    windowManager.defaultDisplay?.supportedModes
+                }
+                val highest = modes?.maxByOrNull { it.refreshRate }
+                if (highest != null && highest.refreshRate > 60f) {
+                    val attrs = window.attributes
+                    attrs.preferredDisplayModeId = highest.modeId
+                    window.attributes = attrs
+                    Log.i(TAG, "Unlocked high refresh rate: ${highest.refreshRate} Hz (mode ${highest.modeId})")
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Could not set preferred display mode", e)
+            }
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         launcherIconManager = LauncherIconManager(applicationContext)
