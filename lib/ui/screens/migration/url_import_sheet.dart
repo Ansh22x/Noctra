@@ -1,0 +1,286 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../data/models/song_model.dart';
+import '../../../data/models/migration_models.dart';
+import '../../../providers/app_providers.dart';
+import '../../../services/metadata/song_artwork_resolver.dart';
+import '../../../services/migration/importers/url_playlist_importer.dart';
+import '../../../services/migration/noctra_transfer_service.dart';
+import '../../../shared/widgets/glass_card.dart';
+import '../../../core/theme/noir_theme.dart';
+
+class UrlImportSheet extends ConsumerStatefulWidget {
+  final bool isDark;
+
+  const UrlImportSheet({super.key, required this.isDark});
+
+  static Future<bool?> show(BuildContext context, bool isDark) {
+    HapticFeedback.mediumImpact();
+    return showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => UrlImportSheet(isDark: isDark),
+    );
+  }
+
+  @override
+  ConsumerState<UrlImportSheet> createState() => _UrlImportSheetState();
+}
+
+class _UrlImportSheetState extends ConsumerState<UrlImportSheet> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focusNode = FocusNode(debugLabel: 'UrlImportSheet_TextField');
+  bool _isLoading = false;
+  String? _errorMsg;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _handleImport() async {
+    final input = _controller.text.trim();
+    if (input.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _errorMsg = null;
+    });
+    HapticFeedback.mediumImpact();
+
+    try {
+      final repo = ref.read(musicRepositoryProvider);
+      final manifest = NoctraTransferService.parseManifest(input);
+      final isUrl = UrlPlaylistImporter.isPlaylistUrl(input);
+
+      ImportedPlaylist? playlist;
+      if (manifest != null && manifest.tracks.isNotEmpty) {
+        playlist = ImportedPlaylist(
+          name: manifest.title,
+          source: 'noctra_transfer',
+          tracks: manifest.tracks
+              .map((s) => NormalizedTrack(
+                    title: s.title,
+                    artist: s.artist,
+                    album: s.album,
+                    duration: s.duration,
+                    artworkUrl: s.artworkUrl,
+                    source: 'noctra_transfer',
+                    sourceId: s.id,
+                  ))
+              .toList(),
+        );
+      } else if (isUrl) {
+        playlist = await UrlPlaylistImporter.importFromUrl(input);
+      } else {
+        playlist = UrlPlaylistImporter.importFromTracklistText(input);
+      }
+
+      if (playlist == null || playlist.tracks.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMsg =
+                'Could not extract tracks. Check the link or tracklist format.';
+          });
+        }
+        return;
+      }
+
+      // Create folder and add songs
+      final folderName = playlist.name.isNotEmpty
+          ? playlist.name
+          : 'Imported Playlist';
+      repo.createFolder(folderName);
+
+      for (int i = 0; i < playlist.tracks.length; i++) {
+        final t = playlist.tracks[i];
+        final id = (t.sourceId != null &&
+                t.sourceId!.length == 11 &&
+                !t.sourceId!.contains('_'))
+            ? t.sourceId!
+            : 'import_${t.title.toLowerCase().hashCode}_${t.artist.toLowerCase().hashCode}_$i';
+        final song = Song(
+          id: id,
+          title: t.title,
+          artist: t.artist,
+          album: folderName,
+          artworkUrl: t.artworkUrl ??
+              ((t.sourceId != null && t.sourceId!.length == 11)
+                  ? 'https://i.ytimg.com/vi/${t.sourceId}/hqdefault.jpg'
+                  : null),
+          duration: t.duration ?? Duration.zero,
+          genre: playlist.source,
+        );
+        repo.addSongToFolder(folderName, song);
+        if (song.artworkUrl == null || song.artworkUrl!.isEmpty) {
+          SongArtworkResolver.resolveArtwork(song).then((art) {
+            if (art != null && art.isNotEmpty) {
+              repo.updateSongMetadata(song.copyWith(artworkUrl: art));
+            }
+          }).catchError((_) {});
+        }
+      }
+
+      HapticFeedback.lightImpact();
+      if (mounted) {
+        Navigator.of(context).pop(true);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Imported ${playlist.tracks.length} tracks to folder "$folderName"',
+            ),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMsg = 'Import failed. Please verify your connection.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    final isDark = widget.isDark;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF111111) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+      child: SafeArea(
+        top: false,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Grab handle
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 14),
+                  decoration: BoxDecoration(
+                    color: t.tertiaryText,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Title
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'IMPORT PLAYLIST LINK',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.2,
+                      color: t.primaryText,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded,
+                        color: t.secondaryText),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              Text(
+                'Paste any public Spotify or YouTube playlist URL, or paste lines of "Song - Artist" tracks to import directly into Noctra.',
+                style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: t.secondaryText,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // URL / Text Input
+              GlassCard(
+                radius: 14,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                child: TextField(
+                  controller: _controller,
+                  focusNode: _focusNode,
+                  maxLines: 4,
+                  minLines: 2,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: t.primaryText,
+                  ),
+                  decoration: InputDecoration(
+                    hintText:
+                        'https://open.spotify.com/playlist/...\nhttps://www.youtube.com/playlist?list=...\nor Song - Artist list',
+                    hintStyle: TextStyle(
+                      fontSize: 12,
+                      color: t.tertiaryText,
+                    ),
+                    border: InputBorder.none,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              if (_errorMsg != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Text(
+                    _errorMsg!,
+                    style: const TextStyle(fontSize: 12, color: Colors.redAccent),
+                  ),
+                ),
+
+              // Import Action Button
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  icon: _isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.black),
+                        )
+                      : const Icon(Icons.download_rounded, size: 18),
+                  label: Text(
+                    _isLoading ? 'Resolving Playlist...' : 'Import to Library',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  onPressed: _isLoading ? null : _handleImport,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,97 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+import '../../../core/utils/noctra_localization.dart';
+import '../../../core/theme/noir_theme.dart';
+
+/// Shows the delete-folder confirmation bottom sheet used by
+/// LibraryFoldersTab. Extracted so the folders tab stays small.
+void showFolderDeleteSheet(
+  BuildContext context, {
+  required bool isDark,
+  required String folderName,
+  required VoidCallback onDelete,
+}) {
+  final t = context.noctraTokens;
+  showModalBottomSheet(
+    context: context,
+    useRootNavigator: true,
+    backgroundColor: Colors.transparent,
+    builder: (ctx) => Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xF40E0E0E) : const Color(0xF4FFFFFF),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+            ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: t.tertiaryText,
+                    borderRadius: BorderRadius.circular(2))),
+            const SizedBox(height: 16),
+            Text(NoctraLocalization.tr('delete_folder'),
+                style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: t.primaryText)),
+            const SizedBox(height: 8),
+            Text(
+              '${NoctraLocalization.tr('delete')} "$folderName"? ${NoctraLocalization.tr('delete_folder_confirm')}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 12.5,
+                  color: t.secondaryText),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12))),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: Text(NoctraLocalization.tr('cancel')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.redAccent.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        onDelete();
+                      });
+                    },
+                    child: Text(NoctraLocalization.tr('delete'),
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+        ),
+      ),
+  );
+}

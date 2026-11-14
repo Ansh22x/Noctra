@@ -1,0 +1,171 @@
+import 'package:flutter/material.dart';
+import '../../../shared/widgets/glass_card.dart';
+import 'url_import_sheet.dart';
+import '../../../core/theme/noir_theme.dart';
+
+class MigrationChooseView extends StatelessWidget {
+  final bool isDark;
+  final ValueChanged<String> onSelectSource;
+
+  const MigrationChooseView({
+    super.key,
+    required this.isDark,
+    required this.onSelectSource,
+  });
+
+  static const List<Map<String, dynamic>> sources = [
+    {
+      'source': 'Spotify',
+      'label': 'Streaming export',
+      'icon': Icons.music_note,
+      'color': Color(0xFF1DB954)
+    },
+    {
+      'source': 'Apple Music',
+      'label': 'Media library export',
+      'icon': Icons.library_music_rounded,
+      'color': Color(0xFFFA2D48)
+    },
+    {
+      'source': 'YouTube Music',
+      'label': 'Video music export',
+      'icon': Icons.play_arrow_rounded,
+      'color': Color(0xFFFF0000)
+    },
+    {
+      'source': 'JioSaavn',
+      'label': 'Regional catalog export',
+      'icon': Icons.waves_rounded,
+      'color': Color(0xFF2BC5F3)
+    },
+    {
+      'source': 'Other (CSV, M3U, JSON)',
+      'label': 'Other file export',
+      'icon': Icons.file_open_rounded,
+      'color': Colors.white54
+    },
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final t = context.noctraTokens;
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      children: [
+        Text(
+          'Bring your playlists and listening history from other music services without connecting your accounts.',
+          style: TextStyle(
+            fontSize: 13,
+            color: t.secondaryText,
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: () async {
+            final res = await UrlImportSheet.show(context, isDark);
+            if (res == true && context.mounted) {
+              Navigator.of(context).pop();
+            }
+          },
+          child: GlassCard(
+            radius: 14,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.link_rounded,
+                    color: Color(0xFF00E5FF),
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Paste Playlist Link / Text',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: t.primaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Spotify, YouTube, or tracklist',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: t.secondaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right_rounded,
+                  color: t.tertiaryText,
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        ...sources.map(
+          (s) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: GestureDetector(
+              onTap: () => onSelectSource(s['source'] as String),
+              child: GlassCard(
+                radius: 14,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: (s['color'] as Color).withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        s['icon'] as IconData,
+                        color: s['color'] as Color,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text(
+                        s['label'] as String,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: t.primaryText,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: t.tertiaryText,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}

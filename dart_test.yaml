@@ -1,0 +1,13 @@
+# Live-network smoke tests are excluded from the default suite so CI stays
+# hermetic. Run them explicitly with:
+#   flutter test --run-skipped --tags live
+#
+# Release staging checks validate the APKs produced by tool/build_release.sh
+# into build/release/. Those binaries are build outputs and are not committed,
+# so the checks only run after staging a release:
+#   flutter test --run-skipped --tags release
+tags:
+  live:
+    skip: "Live-network smoke test; run with --run-skipped --tags live"
+  release:
+    skip: "Requires APKs staged by tool/build_release.sh; run --run-skipped --tags release afterwards"

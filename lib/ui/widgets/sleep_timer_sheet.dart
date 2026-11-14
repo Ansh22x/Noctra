@@ -1,0 +1,200 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/theme/noir_theme.dart';
+import '../../core/utils/localization/localization_keys.dart';
+import '../../core/utils/localization/localization_scope.dart';
+import '../../providers/app_providers.dart';
+import '../../shared/widgets/glass_card.dart';
+
+class SleepTimerSheet extends ConsumerWidget {
+  const SleepTimerSheet({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = context.noctraTokens;
+    final themeMode = ref.watch(themeModeProvider);
+    final isDark = themeMode.isDark;
+    final audioPlayer = ref.watch(audioPlayerServiceProvider);
+    final remainingStream = ref.watch(sleepTimerStreamProvider);
+    final remaining = remainingStream.asData?.value ?? audioPlayer.sleepTimerRemainingMinutes;
+    final isEndOfTrack = audioPlayer.sleepTimerEndOfTrack;
+
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 640),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF0D0D0D) : const Color(0xFFFAFAFA),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border.all(color: isDark ? Colors.white12 : Colors.black12),
+      ),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? Colors.white12 : Colors.black12,
+                      ),
+                      child: Icon(Icons.bedtime_rounded, size: 20, color: t.primaryText),
+                    ),
+                    const SizedBox(width: 10),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          context.tr(L10nKeys.nightSleepTimer),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: t.primaryText,
+                          ),
+                        ),
+                        Text(
+                          isEndOfTrack
+                              ? 'Stops when current track ends'
+                              : (remaining != null
+                                  ? context.tr(L10nKeys.minutesRemaining, {'minutes': remaining.toString()})
+                                  : context.tr(L10nKeys.autoFadeOutPause)),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontFamily: remaining != null ? 'monospace' : null,
+                            color: (isEndOfTrack || remaining != null)
+                                ? Colors.cyanAccent
+                                : (t.secondaryText),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: Icon(Icons.close_rounded, color: t.secondaryText),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            GlassCard(
+              radius: 16,
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [0, 15, 30, 45, 60, 90].map((m) {
+                  final isSel = !isEndOfTrack &&
+                      (m == 0
+                          ? remaining == null
+                          : (remaining != null &&
+                              remaining > 0 &&
+                              m == [15, 30, 45, 60, 90].reduce((a, b) => (a - remaining).abs() < (b - remaining).abs() ? a : b)));
+                  return Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                      child: InkWell(
+                        onTap: () {
+                          audioPlayer.setSleepTimer(m);
+                          Navigator.of(context).pop();
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 9),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: isSel
+                                ? (t.primaryText)
+                                : (isDark ? Colors.white10 : Colors.black12),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            m == 0 ? context.tr(L10nKeys.off) : '${m}m',
+                            style: TextStyle(
+                              fontSize: 11.5,
+                              fontWeight: isSel ? FontWeight.w700 : FontWeight.w500,
+                              color: isSel
+                                  ? (t.primaryText)
+                                  : (t.secondaryText),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // End of Track Button
+            InkWell(
+              onTap: () {
+                audioPlayer.setSleepTimerEndOfTrack(!isEndOfTrack);
+                Navigator.of(context).pop();
+              },
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: isEndOfTrack
+                      ? (t.primaryText)
+                      : (isDark ? Colors.white10 : Colors.black12),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isEndOfTrack
+                        ? Colors.transparent
+                        : (isDark ? Colors.white12 : Colors.black12),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.skip_next_rounded,
+                      size: 18,
+                      color: isEndOfTrack
+                          ? (t.primaryText)
+                          : (t.secondaryText),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'End of Current Track',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isEndOfTrack ? FontWeight.w700 : FontWeight.w600,
+                        color: isEndOfTrack
+                            ? (t.primaryText)
+                            : (t.secondaryText),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+        ),
+      ),
+        ),
+      ),
+    );
+  }
+}

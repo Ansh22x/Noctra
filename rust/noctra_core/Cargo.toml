@@ -1,0 +1,32 @@
+[package]
+name = "noctra_core"
+version = "1.0.1"
+edition = "2021"
+authors = ["Ansh22x <https://github.com/Ansh22x>", "GuruMachanica <https://github.com/GuruMachanica>"]
+description = "Native Rust DSP audio engine, multi-source music resolver, and high-performance FFI core for Noctra."
+
+[lib]
+name = "noctra_core"
+path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]
+
+[[bin]]
+name = "noctra-server"
+path = "src/main.rs"
+
+[dependencies]
+tokio = { version = "1.40", features = ["full"] }
+axum = { version = "0.8" }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+regex = "1.10"
+md-5 = "0.10"
+base64 = "0.22"
+bytes = "1.7"
+futures-util = "0.3"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+url = "2.5"
+urlencoding = "2.1"
