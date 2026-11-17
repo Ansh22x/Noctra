@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -17,6 +18,7 @@ import 'services/audio/stream_quality_service.dart';
 import 'services/audio/noctra_audio_handler.dart';
 import 'services/assistant/infrastructure/assistant_intent_channel.dart';
 import 'services/updater/app_update_service.dart';
+import 'services/network/dynamic_template_service.dart';
 import 'ui/screens/onboarding/onboarding_screen.dart';
 import 'ui/screens/splash_screen.dart';
 import 'ui/widgets/main_navigation_shell.dart';
@@ -31,6 +33,7 @@ NoctraAudioHandler? noctraAudioHandler;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   NoctraLogger.install();
+  unawaited(DynamicTemplateService.instance.init());
 
   // Edge-to-edge system overlays
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);

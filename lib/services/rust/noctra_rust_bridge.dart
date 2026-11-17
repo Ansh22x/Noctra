@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
 import 'dart:typed_data';
@@ -55,6 +56,9 @@ class NoctraRustBridge {
   _NoctraRomanizeDart? _romanizeFn;
   _NoctraDetectScriptDart? _detectScriptFn;
   _NoctraScoreCandidateDart? _scoreCandidateFn;
+  _NoctraTemplateLoadDart? _templateLoadFn;
+  _NoctraTemplateHasDart? _templateHasFn;
+  _NoctraTemplateExecuteDart? _templateExecuteFn;
 
   bool get isAvailable => _isAvailable;
 
@@ -100,6 +104,11 @@ class NoctraRustBridge {
     _romanizeFn = lib.lookup<NativeFunction<_NoctraRomanizeC>>('noctra_romanize_text').asFunction<_NoctraRomanizeDart>();
     _detectScriptFn = lib.lookup<NativeFunction<_NoctraDetectScriptC>>('noctra_detect_script').asFunction<_NoctraDetectScriptDart>();
     _scoreCandidateFn = lib.lookup<NativeFunction<_NoctraScoreCandidateC>>('noctra_score_candidate').asFunction<_NoctraScoreCandidateDart>();
+    try {
+      _templateLoadFn = lib.lookup<NativeFunction<_NoctraTemplateLoadC>>('noctra_template_load_registry').asFunction<_NoctraTemplateLoadDart>();
+      _templateHasFn = lib.lookup<NativeFunction<_NoctraTemplateHasC>>('noctra_template_has').asFunction<_NoctraTemplateHasDart>();
+      _templateExecuteFn = lib.lookup<NativeFunction<_NoctraTemplateExecuteC>>('noctra_template_execute').asFunction<_NoctraTemplateExecuteDart>();
+    } catch (_) {}
   }
 
   /// Decrypts a JioSaavn encrypted media URL in pure native Rust.
@@ -270,4 +279,62 @@ class NoctraRustBridge {
       malloc.free(cArtist);
     }
   }
+
+  /// Loads declarative endpoint templates from a JSON string.
+  bool loadTemplateRegistry(String jsonSpec) {
+    if (!_isAvailable || _templateLoadFn == null) return false;
+    final cSpec = jsonSpec.toNativeUtf8();
+    try {
+      return _templateLoadFn!(cSpec) >= 0;
+    } catch (e) {
+      NoctraLogger.w('Failed to load template registry: $e');
+      return false;
+    } finally {
+      malloc.free(cSpec);
+    }
+  }
+
+  /// Checks if an operation template is registered.
+  bool hasTemplate(String operationId) {
+    if (!_isAvailable || _templateHasFn == null) return false;
+    final cId = operationId.toNativeUtf8();
+    try {
+      return _templateHasFn!(cId) == 1;
+    } catch (_) {
+      return false;
+    } finally {
+      malloc.free(cId);
+    }
+  }
+
+  /// Executes an operation template in native Rust with automatic fallback cascading.
+  String? executeTemplate(String operationId, Map<String, dynamic> params) {
+    if (!_isAvailable || _templateExecuteFn == null || _freeStringFn == null) return null;
+    final cId = operationId.toNativeUtf8();
+    final cParams = jsonEncode(params).toNativeUtf8();
+    try {
+      final resPtr = _templateExecuteFn!(cId, cParams);
+      if (resPtr == nullptr) return null;
+      try {
+        return resPtr.toDartString();
+      } finally {
+        _freeStringFn!(resPtr);
+      }
+    } catch (e) {
+      NoctraLogger.w('Template execution failed: $e');
+      return null;
+    } finally {
+      malloc.free(cId);
+      malloc.free(cParams);
+    }
+  }
 }
+
+typedef _NoctraTemplateLoadC = Int32 Function(Pointer<Utf8> jsonSpec);
+typedef _NoctraTemplateLoadDart = int Function(Pointer<Utf8> jsonSpec);
+
+typedef _NoctraTemplateHasC = Int32 Function(Pointer<Utf8> operationId);
+typedef _NoctraTemplateHasDart = int Function(Pointer<Utf8> operationId);
+
+typedef _NoctraTemplateExecuteC = Pointer<Utf8> Function(Pointer<Utf8> operationId, Pointer<Utf8> jsonParams);
+typedef _NoctraTemplateExecuteDart = Pointer<Utf8> Function(Pointer<Utf8> operationId, Pointer<Utf8> jsonParams);

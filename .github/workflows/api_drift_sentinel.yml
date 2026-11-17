@@ -1,0 +1,67 @@
+name: API Drift Sentinel & Health Probe
+
+on:
+  schedule:
+    # Run daily at 04:00 UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  probe-endpoints:
+    name: Probe Provider Endpoints & Detect Drift
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify Spotify Web Player Token Endpoint
+        run: |
+          TOKEN_RESP=$(curl -s -w "\n%{http_code}" -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" "https://open.spotify.com/get_access_token?reason=transport&productType=web_player")
+          HTTP_CODE=$(echo "$TOKEN_RESP" | tail -n1)
+          BODY=$(echo "$TOKEN_RESP" | sed '$d')
+          echo "Spotify Token HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::error ::Spotify token endpoint returned status $HTTP_CODE"
+            exit 1
+          fi
+          echo "Spotify token endpoint healthy."
+
+      - name: Verify LRCLIB Lyrics Endpoint
+        run: |
+          LRC_RESP=$(curl -s -w "\n%{http_code}" -H "User-Agent: Noctra-Sentinel/1.0" "https://lrclib.net/api/search?q=test")
+          HTTP_CODE=$(echo "$LRC_RESP" | tail -n1)
+          echo "LRCLIB HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::warning ::LRCLIB search endpoint returned status $HTTP_CODE"
+          fi
+
+      - name: Verify JioSaavn Autocomplete Endpoint
+        run: |
+          SAAVN_RESP=$(curl -s -w "\n%{http_code}" -H "User-Agent: Mozilla/5.0" "https://www.jiosaavn.com/api.php?__call=autocomplete.get&_format=json&_marker=0&cc=in&includeMetaTags=1&query=arijit")
+          HTTP_CODE=$(echo "$SAAVN_RESP" | tail -n1)
+          echo "JioSaavn HTTP Status: $HTTP_CODE"
+          if [ "$HTTP_CODE" -ne 200 ]; then
+            echo "::warning ::JioSaavn autocomplete endpoint returned status $HTTP_CODE"
+          fi
+
+      - name: Validate Local Template Schema Integrity
+        run: |
+          python3 -c "
+          import json
+          with open('assets/templates/provider_endpoints.json') as f:
+              data = json.load(f)
+          assert 'operations' in data, 'Missing operations map'
+          ops = data['operations']
+          for name, op in ops.items():
+              assert 'url' in op, f'Operation {name} missing url'
+              print(f'Validated operation template: {name}')
+          print(f'Successfully validated {len(ops)} endpoint templates.')
+          "

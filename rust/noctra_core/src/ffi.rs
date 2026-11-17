@@ -297,3 +297,88 @@ pub extern "C" fn noctra_score_candidate(
 
     score_candidate(query, title, artist)
 }
+
+use crate::services::template_engine::get_global_template_engine;
+
+/// Loads or updates declarative endpoint templates from a JSON string.
+/// Returns number of loaded operations, or -1 on error.
+#[no_mangle]
+pub extern "C" fn noctra_template_load_registry(json_spec_ptr: *const c_char) -> i32 {
+    if json_spec_ptr.is_null() {
+        return -1;
+    }
+    let c_str = unsafe { CStr::from_ptr(json_spec_ptr) };
+    let Ok(json_spec) = c_str.to_str() else { return -1 };
+
+    match get_global_template_engine().load_registry_json(json_spec) {
+        Ok(count) => count as i32,
+        Err(_) => -1,
+    }
+}
+
+/// Checks if an operation template exists in the registry.
+#[no_mangle]
+pub extern "C" fn noctra_template_has(operation_id_ptr: *const c_char) -> i32 {
+    if operation_id_ptr.is_null() {
+        return 0;
+    }
+    let c_str = unsafe { CStr::from_ptr(operation_id_ptr) };
+    let Ok(op_id) = c_str.to_str() else { return 0 };
+
+    if get_global_template_engine().has_operation(op_id) {
+        1
+    } else {
+        0
+    }
+}
+
+/// Executes an operation template with the given JSON parameters.
+/// Returns a JSON response string that MUST be freed using [noctra_free_string].
+#[no_mangle]
+pub extern "C" fn noctra_template_execute(
+    operation_id_ptr: *const c_char,
+    json_params_ptr: *const c_char,
+) -> *mut c_char {
+    if operation_id_ptr.is_null() {
+        return std::ptr::null_mut();
+    }
+    let Ok(op_id) = (unsafe { CStr::from_ptr(operation_id_ptr) }).to_str() else {
+        return std::ptr::null_mut();
+    };
+
+    let params: std::collections::HashMap<String, serde_json::Value> = if !json_params_ptr.is_null() {
+        if let Ok(params_str) = (unsafe { CStr::from_ptr(json_params_ptr) }).to_str() {
+            serde_json::from_str(params_str).unwrap_or_default()
+        } else {
+            std::collections::HashMap::new()
+        }
+    } else {
+        std::collections::HashMap::new()
+    };
+
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build();
+
+    let Ok(rt) = rt else {
+        return std::ptr::null_mut();
+    };
+
+    let result = rt.block_on(async {
+        get_global_template_engine().execute(op_id, &params).await
+    });
+
+    match result {
+        Ok(val) => {
+            let json_str = val.to_string();
+            CString::new(json_str).map(|c| c.into_raw()).unwrap_or(std::ptr::null_mut())
+        }
+        Err(err) => {
+            let err_json = serde_json::json!({
+                "error": err,
+                "status": "error"
+            }).to_string();
+            CString::new(err_json).map(|c| c.into_raw()).unwrap_or(std::ptr::null_mut())
+        }
+    }
+}

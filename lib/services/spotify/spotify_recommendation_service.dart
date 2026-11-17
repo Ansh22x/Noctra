@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../data/models/song_model.dart';
 import '../../core/utils/noctra_logger.dart';
+import '../network/dynamic_template_service.dart';
 
 /// Spotify-powered Recommendation Engine.
 /// Replaces all on-device AI/ML models with Spotify's official recommendation algorithms
@@ -55,6 +56,24 @@ class SpotifyRecommendationService {
         DateTime.now().isBefore(_tokenExpiry!)) {
       return _cachedToken;
     }
+
+    try {
+      final tRes = await DynamicTemplateService.instance.execute('spotify_token');
+      if (tRes is Map<String, dynamic>) {
+        final token = tRes['accessToken'] as String?;
+        final expiryMs = tRes['accessTokenExpirationTimestampMs'] as num?;
+        if (token != null && token.isNotEmpty) {
+          _cachedToken = token;
+          if (expiryMs != null) {
+            _tokenExpiry = DateTime.fromMillisecondsSinceEpoch(expiryMs.toInt())
+                .subtract(const Duration(minutes: 5));
+          } else {
+            _tokenExpiry = DateTime.now().add(const Duration(minutes: 50));
+          }
+          return _cachedToken;
+        }
+      }
+    } catch (_) {}
 
     try {
       final res = await http.get(
@@ -119,13 +138,34 @@ class SpotifyRecommendationService {
       }
     } catch (_) {}
 
-    // 2. Direct Spotify Recommendation API
+    // 2. Direct Spotify Recommendation API via DynamicTemplateService / api-anything
     try {
       final token = await _getSpotifyToken();
       if (token != null) {
         final genres = (seedGenres != null && seedGenres.isNotEmpty)
             ? seedGenres.take(3).join(',')
             : 'pop,dance';
+
+        final tRes = await DynamicTemplateService.instance.execute(
+          'spotify_recommendations',
+          {
+            'bearer_token': token,
+            'limit': count.toString(),
+            'seed_genres': genres,
+            'seed_artists': seedArtists?.take(2).join(',') ?? '',
+            'seed_tracks': seedTracks?.take(2).join(',') ?? '',
+          },
+        );
+
+        if (tRes is Map<String, dynamic>) {
+          final tracks = (tRes['tracks'] as List?) ?? [];
+          final songs = <Song>[];
+          for (final t in tracks) {
+            final song = _parseSpotifyApiTrack(t);
+            if (song != null) songs.add(song);
+          }
+          if (songs.isNotEmpty) return songs;
+        }
 
         final qParams = <String, String>{
           'limit': count.toString(),

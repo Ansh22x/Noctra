@@ -48,3 +48,4 @@ flutter:
     - assets/images/logo_noctra_liquid_glass.png
     - assets/images/logo_noctra_material_u.png
     - assets/images/liquid_glass_shard.png
+    - assets/templates/provider_endpoints.json

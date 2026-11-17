@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "operations": {
+    "spotify_token": {
+      "url": "https://open.spotify.com/get_access_token?reason=transport&productType=web_player",
+      "method": "GET",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      "timeout_ms": 6000
+    },
+    "spotify_recommendations": {
+      "url": "https://api.spotify.com/v1/recommendations",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer {{bearer_token}}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      "params": {
+        "limit": "{{limit|default:20}}",
+        "seed_tracks": "{{seed_tracks}}",
+        "seed_genres": "{{seed_genres}}",
+        "seed_artists": "{{seed_artists}}"
+      },
+      "timeout_ms": 7000,
+      "fallbacks": [
+        "spotify_charts"
+      ]
+    },
+    "spotify_charts": {
+      "url": "https://api.spotify.com/v1/playlists/{{playlist_id|default:37i9dQZF1DXcBWIGoYBM5M}}/tracks",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer {{bearer_token}}",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      "params": {
+        "limit": "{{limit|default:30}}"
+      },
+      "timeout_ms": 7000
+    },
+    "lrclib_get": {
+      "url": "https://lrclib.net/api/get",
+      "method": "GET",
+      "headers": {
+        "User-Agent": "Noctra-Audiophile-Client/1.0.2",
+        "Accept": "application/json"
+      },
+      "params": {
+        "track_name": "{{track_name}}",
+        "artist_name": "{{artist_name}}",
+        "album_name": "{{album_name}}",
+        "duration": "{{duration}}"
+      },
+      "timeout_ms": 6000,
+      "fallbacks": [
+        "lrclib_search"
+      ]
+    },
+    "lrclib_search": {
+      "url": "https://lrclib.net/api/search",
+      "method": "GET",
+      "headers": {
+        "User-Agent": "Noctra-Audiophile-Client/1.0.2",
+        "Accept": "application/json"
+      },
+      "params": {
+        "q": "{{query}}"
+      },
+      "timeout_ms": 6000
+    },
+    "jiosaavn_search": {
+      "url": "https://www.jiosaavn.com/api.php",
+      "method": "GET",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      "params": {
+        "__call": "autocomplete.get",
+        "_format": "json",
+        "_marker": "0",
+        "cc": "in",
+        "includeMetaTags": "1",
+        "query": "{{query}}"
+      },
+      "timeout_ms": 7000
+    },
+    "jiosaavn_song_details": {
+      "url": "https://www.jiosaavn.com/api.php",
+      "method": "GET",
+      "headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Accept": "application/json"
+      },
+      "params": {
+        "__call": "song.getDetails",
+        "pids": "{{pids}}",
+        "_format": "json",
+        "_marker": "0",
+        "ctx": "android"
+      },
+      "timeout_ms": 7000
+    }
+  }
+}

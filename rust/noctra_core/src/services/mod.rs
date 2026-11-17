@@ -6,3 +6,4 @@ pub mod musicbrainz;
 pub mod ranker;
 pub mod romanizer;
 pub mod spotify;
+pub mod template_engine;
