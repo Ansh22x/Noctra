@@ -48,10 +48,11 @@ jobs:
           echo "Determined release version: ${CLEAN_VER}, build number: ${BUILD_NUM}"
 
           python3 -c "
-          import re
+          import re, os
           ver = '${CLEAN_VER}'
           try:
-              with open('CHANGELOG.md', 'r', encoding='utf-8') as f:
+              cl_path = 'docs/CHANGELOG.md' if os.path.exists('docs/CHANGELOG.md') else 'CHANGELOG.md'
+              with open(cl_path, 'r', encoding='utf-8') as f:
                   content = f.read()
               pattern = rf'(## v{re.escape(ver)}.*?(?=\n## v|\Z))'
               match = re.search(pattern, content, re.DOTALL)
