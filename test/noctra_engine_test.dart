@@ -44,15 +44,13 @@ void main() {
   });
 
   group('Dynamic theme tokens', () {
-    test('each built-in theme exposes distinct semantic tokens', () {
-      final black = NoirTheme.getTheme(NoirThemeMode.noirBlack);
-      final white = NoirTheme.getTheme(NoirThemeMode.noirWhite);
+    test('each retained theme exposes distinct semantic tokens', () {
+      final black = NoirTheme.getTheme(NoirThemeMode.glassmorphicBlack);
       final glass = NoirTheme.getTheme(NoirThemeMode.liquidGlass);
       expect(black.extension<NoctraThemeTokens>()?.canvas, isNotNull);
-      expect(white.brightness, Brightness.light);
       expect(glass.extension<NoctraThemeTokens>()?.glassBlurSigma, 18);
       expect(black.extension<NoctraThemeTokens>()?.surface,
-          isNot(white.extension<NoctraThemeTokens>()?.surface));
+          isNot(glass.extension<NoctraThemeTokens>()?.surface));
     });
   });
 

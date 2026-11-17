@@ -242,6 +242,12 @@ mixin MusicRepositoryAICurationMixin on ChangeNotifier {
   }
 
   Future<List<Song>> generateAIRadioForSong(Song seed) async {
+    try {
+      final spotifyRecs = await SpotifyRecommendationService.instance
+          .getRadioForTrack(seed, limit: 25);
+      if (spotifyRecs.isNotEmpty) return spotifyRecs;
+    } catch (_) {}
+
     final dedup = SongSimilarityDeduplicator(seedSong: seed);
     final results = <Song>[];
 

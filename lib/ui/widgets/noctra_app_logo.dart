@@ -42,32 +42,16 @@ class NoctraAppLogo extends ConsumerWidget {
     // otherwise fallback to matching the active theme mode.
     final String logoAsset;
     switch (appIcon) {
-      case NoctraAppIcon.noirWhite:
-        logoAsset = 'assets/images/logo_noctra_noir_white.png';
-        break;
       case NoctraAppIcon.liquidGlass:
         logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
         break;
-      case NoctraAppIcon.materialU:
-        logoAsset = 'assets/images/logo_noctra_material_u.png';
-        break;
       case NoctraAppIcon.noirBlack:
-        logoAsset = 'assets/images/logo_noctra_noir_black.png';
-        break;
       case NoctraAppIcon.defaultIcon:
-        switch (themeMode) {
-          case NoirThemeMode.noirWhite:
-            logoAsset = 'assets/images/logo_noctra_noir_white.png';
-            break;
-          case NoirThemeMode.liquidGlass:
-            logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
-            break;
-          case NoirThemeMode.materialU:
-            logoAsset = 'assets/images/logo_noctra_material_u.png';
-            break;
-          case NoirThemeMode.noirBlack:
-            logoAsset = 'assets/images/logo_noctra_noir_black.png';
-            break;
+      default:
+        if (themeMode.isLiquidGlass) {
+          logoAsset = 'assets/images/logo_noctra_liquid_glass.png';
+        } else {
+          logoAsset = 'assets/images/logo_noctra_noir_black.png';
         }
         break;
     }

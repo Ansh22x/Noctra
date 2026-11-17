@@ -7,7 +7,7 @@ import '../../../data/models/song_model.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
 import '../../../services/metadata/song_artwork_resolver.dart';
-import '../../../services/ai/ai_mix_track_source.dart';
+import '../../../services/audio/playlist_remix_source.dart';
 import '../noir_mini_player_dock.dart';
 import 'ai_collection_action_bar.dart';
 import 'export_playlist_sheet.dart';
@@ -96,7 +96,9 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
     final repo = ref.read(musicRepositoryProvider);
     final songs = widget.folderName == 'Favorites'
         ? repo.favorites
-        : (repo.customFolders[widget.folderName] ?? widget.songs);
+        : (widget.folderName == 'Downloads'
+            ? repo.downloads
+            : (repo.customFolders[widget.folderName] ?? widget.songs));
     final missing = songs
         .where((s) => s.artworkUrl == null || s.artworkUrl!.isEmpty)
         .toList();
@@ -130,7 +132,7 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
   void _remix(List<Song> songs) {
     if (songs.length < 2) return;
     _remixEpoch++;
-    final remixed = AiMixTrackSource.applyRemixOrder(
+    final remixed = PlaylistRemixSource.applyRemixOrder(
       songs,
       epoch: _remixEpoch,
       vibeKey: widget.folderName,
@@ -157,7 +159,9 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
     final repo = ref.watch(musicRepositoryProvider);
     final currentSongs = widget.folderName == 'Favorites'
         ? repo.favorites
-        : (repo.customFolders[widget.folderName] ?? widget.songs);
+        : (widget.folderName == 'Downloads'
+            ? repo.downloads
+            : (repo.customFolders[widget.folderName] ?? widget.songs));
     final isDark = widget.isDark;
     final displaySongs = _getDisplaySongs(currentSongs);
 
@@ -238,8 +242,14 @@ class _FolderDetailViewState extends ConsumerState<FolderDetailView> {
                               song: s,
                               isDark: isDark,
                               onRemove: () {
-                                repo.removeSongFromFolder(
-                                    widget.folderName, s.id);
+                                if (widget.folderName == 'Favorites') {
+                                  repo.toggleFavorite(s);
+                                } else if (widget.folderName == 'Downloads') {
+                                  repo.removeDownloadedSong(s.id);
+                                } else {
+                                  repo.removeSongFromFolder(
+                                      widget.folderName, s.id);
+                                }
                                 setState(() {});
                               },
                               onTap: () => ref

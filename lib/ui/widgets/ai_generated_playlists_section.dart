@@ -27,7 +27,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                NoctraLocalization.tr('ai_mixes'),
+                'Spotify Dynamic Mixes',
                 style: TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
@@ -35,7 +35,7 @@ class AIGeneratedPlaylistsSection extends ConsumerWidget {
                 ),
               ),
               Text(
-                '16-Axis Neural',
+                'Spotify Engine',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w600,

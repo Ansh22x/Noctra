@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/noir_theme.dart';
 import '../../providers/app_providers.dart';
-import '../screens/ai_studio_screen.dart';
 import '../screens/home_screen.dart';
 import '../screens/library_screen.dart';
 import '../screens/search_screen.dart';
@@ -22,9 +21,8 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell>
     with RouteAware {
   /// Lazy tab instantiation: each screen is created only on its first visit
   /// (then kept alive inside the IndexedStack so its state survives tab
-  /// switches). Avoids eagerly booting Search/Library/AI Studio — and their
-  /// network fetches — at app startup for users who never open those tabs.
-  final List<Widget?> _screens = List<Widget?>.filled(4, null);
+  /// switches).
+  final List<Widget?> _screens = List<Widget?>.filled(3, null);
   final Set<int> _visitedTabs = {0};
 
   /// True while a child route (e.g. ArtistScreen, FolderDetailView) is pushed
@@ -41,8 +39,6 @@ class _MainNavigationShellState extends ConsumerState<MainNavigationShell>
         return const SearchScreen();
       case 2:
         return const LibraryScreen();
-      case 3:
-        return const AIStudioScreen();
     }
     return const SizedBox.shrink();
   }

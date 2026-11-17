@@ -1,65 +1,42 @@
 import 'package:flutter/cupertino.dart' show CupertinoPageTransitionsBuilder;
 import 'package:flutter/material.dart';
-import 'material_u_theme.dart' show buildMaterialUTheme;
 import 'noctra_theme_tokens.dart';
 
-export 'material_u_theme.dart'
-    show buildMaterialUTheme, MaterialUSchemeHolder;
 export 'noctra_design_tokens.dart';
 export 'noctra_theme_backdrop.dart';
 export 'noctra_theme_tokens.dart';
 
 enum NoirThemeMode {
-  noirBlack,
-  noirWhite,
-  liquidGlass,
-  materialU,
+  glassmorphicBlack,
+  liquidGlass;
+
+  static const noirBlack = glassmorphicBlack;
 }
 
 extension NoirThemeModeX on NoirThemeMode {
-  /// Material U follows the OS light/dark setting; the other modes are
-  /// fixed. Read from the platform dispatcher so the getter works without
-  /// a BuildContext.
-  bool get isDark => switch (this) {
-        NoirThemeMode.noirWhite => false,
-        NoirThemeMode.materialU =>
-          WidgetsBinding
-              .instance.platformDispatcher.platformBrightness ==
-              Brightness.dark,
-        _ => true,
-      };
+  bool get isDark => true;
   bool get isLiquidGlass => this == NoirThemeMode.liquidGlass;
-  bool get isWhite => this == NoirThemeMode.noirWhite;
-  bool get isMaterialU => this == NoirThemeMode.materialU;
+  bool get isGlassmorphicBlack => this == NoirThemeMode.glassmorphicBlack;
+  bool get isWhite => false;
+  bool get isMaterialU => false;
 }
 
 class NoirColors {
-  // Pure Monochromatic Noir Black Palette
+  // Glassmorphic Black Palette (Deep noir translucent surfaces with frosted specular borders)
   static const Color blackCanvas = Color(0xFF070709);
-  static const Color blackSurface = Color(0xFF0E0E12);
-  static const Color blackSurfaceVariant = Color(0xFF16161C);
-  static const Color blackGlassBg = Color(0xCC0D0D0E);
-  static const Color blackBorder = Color(0x28FFFFFF);
-  static const Color blackBorderSubtle = Color(0x12FFFFFF);
+  static const Color blackSurface = Color(0xD90E0E14);
+  static const Color blackSurfaceVariant = Color(0xC4161620);
+  static const Color blackElevatedSurface = Color(0xEB1E1E2A);
+  static const Color blackGlassBg = Color(0xCC0D0D12);
+  static const Color blackBorder = Color(0x2EFFFFFF);
+  static const Color blackBorderSubtle = Color(0x18FFFFFF);
   static const Color blackTextPrimary = Color(0xFFFFFFFF);
-  static const Color blackTextSecondary = Color(0xFFA8A8B2);
-  static const Color blackTextTertiary = Color(0xFF7C7C86);
+  static const Color blackTextSecondary = Color(0xFFA8A8B6);
+  static const Color blackTextTertiary = Color(0xFF7C7C8A);
   static const Color blackAccent = Color(0xFFFFFFFF);
+  static const Color blackSecondaryAccent = Color(0xFF8E8E98);
 
-  // Pure Monochromatic Noir White Palette
-  static const Color whiteCanvas = Color(0xFFF4F4F6);
-  static const Color whiteSurface = Color(0xFFFFFFFF);
-  static const Color whiteSurfaceVariant = Color(0xFFEBEBF0);
-  static const Color whiteGlassBg = Color(0xDEFFFFFF);
-  static const Color whiteBorder = Color(0x2E000000);
-  static const Color whiteBorderSubtle = Color(0x0F000000);
-  static const Color whiteTextPrimary = Color(0xFF060608);
-  static const Color whiteTextSecondary = Color(0xFF5C5C64);
-  static const Color whiteTextTertiary = Color(0xFF6E6E78);
-  static const Color whiteAccent = Color(0xFF000000);
-
-  // Liquid Glass — deep sapphire canvas, glass surfaces, aurora cyan actions,
-  // violet selection, and mint confirmation. Visibly sapphire blue.
+  // Liquid Glass — deep sapphire canvas, fluid glass surfaces, aurora cyan actions, violet selection
   static const Color glassCanvas = Color(0xFF162E4A);
   static const Color glassSurface = Color(0xD0253E60);
   static const Color glassSurfaceVariant = Color(0xC0356080);
@@ -70,90 +47,82 @@ class NoirColors {
   static const Color glassAccent = Color(0xFF7EC8FF);
   static const Color glassSecondaryAccent = Color(0xFFB8A8FF);
   static const Color glassTertiaryAccent = Color(0xFF68E8C0);
+
+  // Fallbacks for legacy isDark checks in widgets (both active themes are dark/glass)
+  static const Color whiteTextPrimary = blackTextPrimary;
+  static const Color whiteTextSecondary = blackTextSecondary;
+  static const Color whiteTextTertiary = blackTextTertiary;
+  static const Color whiteBorder = blackBorder;
+  static const Color whiteBorderSubtle = blackBorderSubtle;
+  static const Color whiteSurface = blackSurface;
+  static const Color whiteSurfaceVariant = blackSurfaceVariant;
+  static const Color whiteElevatedSurface = blackElevatedSurface;
+  static const Color whiteCanvas = blackCanvas;
+  static const Color whiteAccent = blackAccent;
+  static const Color whiteSecondaryAccent = blackSecondaryAccent;
 }
 
 class NoirTheme {
   static ThemeData getTheme(NoirThemeMode mode) {
-    if (mode == NoirThemeMode.materialU) {
-      return buildMaterialUTheme();
-    }
-    final isWhite = mode == NoirThemeMode.noirWhite;
     final isLiquidGlass = mode == NoirThemeMode.liquidGlass;
 
-    final canvas = isWhite
-        ? NoirColors.whiteCanvas
-        : (isLiquidGlass ? NoirColors.glassCanvas : NoirColors.blackCanvas);
-    final surface = isWhite
-        ? NoirColors.whiteSurface
-        : (isLiquidGlass ? NoirColors.glassSurface : NoirColors.blackSurface);
-    final textPrimary = isWhite
-        ? NoirColors.whiteTextPrimary
-        : (isLiquidGlass
-            ? NoirColors.glassTextPrimary
-            : NoirColors.blackTextPrimary);
-    final textSecondary = isWhite
-        ? NoirColors.whiteTextSecondary
-        : (isLiquidGlass
-            ? NoirColors.glassTextSecondary
-            : NoirColors.blackTextSecondary);
-    final accent = isWhite
-        ? NoirColors.whiteAccent
-        : (isLiquidGlass ? NoirColors.glassAccent : NoirColors.blackAccent);
+    final canvas = isLiquidGlass ? NoirColors.glassCanvas : NoirColors.blackCanvas;
+    final surface = isLiquidGlass ? NoirColors.glassSurface : NoirColors.blackSurface;
+    final surfaceVariant = isLiquidGlass
+        ? NoirColors.glassSurfaceVariant
+        : NoirColors.blackSurfaceVariant;
+    final elevatedSurface = isLiquidGlass
+        ? NoirColors.glassElevatedSurface
+        : NoirColors.blackElevatedSurface;
+    final textPrimary = isLiquidGlass
+        ? NoirColors.glassTextPrimary
+        : NoirColors.blackTextPrimary;
+    final textSecondary = isLiquidGlass
+        ? NoirColors.glassTextSecondary
+        : NoirColors.blackTextSecondary;
+    final textTertiary = isLiquidGlass
+        ? NoirColors.glassTextTertiary
+        : NoirColors.blackTextTertiary;
+    final accent = isLiquidGlass ? NoirColors.glassAccent : NoirColors.blackAccent;
     final secondaryAccent = isLiquidGlass
         ? NoirColors.glassSecondaryAccent
-        : (isWhite ? const Color(0xFF636366) : const Color(0xFF8E8E93));
+        : NoirColors.blackSecondaryAccent;
     final tertiaryAccent =
         isLiquidGlass ? NoirColors.glassTertiaryAccent : accent;
+
     final tokens = NoctraThemeTokens(
       canvas: canvas,
       surface: surface,
-      surfaceVariant: isWhite
-          ? NoirColors.whiteSurfaceVariant
-          : (isLiquidGlass
-              ? NoirColors.glassSurfaceVariant
-              : NoirColors.blackSurfaceVariant),
-      elevatedSurface: isWhite
-          ? NoirColors.whiteSurface
-          : (isLiquidGlass
-              ? NoirColors.glassElevatedSurface
-              : const Color(0xFF1C1C20)),
+      surfaceVariant: surfaceVariant,
+      elevatedSurface: elevatedSurface,
       primaryText: textPrimary,
       secondaryText: textSecondary,
-      tertiaryText: isWhite
-          ? NoirColors.whiteTextTertiary
-          : (isLiquidGlass
-              ? NoirColors.glassTextTertiary
-              : NoirColors.blackTextTertiary),
-      border: isWhite
-          ? NoirColors.whiteBorder
-          : (isLiquidGlass ? const Color(0x77D0E4FF) : NoirColors.blackBorder),
-      subtleBorder: isWhite
-          ? NoirColors.whiteBorderSubtle
-          : (isLiquidGlass
-              ? const Color(0x44C0D8F0)
-              : NoirColors.blackBorderSubtle),
+      tertiaryText: textTertiary,
+      border: isLiquidGlass ? const Color(0x77D0E4FF) : NoirColors.blackBorder,
+      subtleBorder: isLiquidGlass
+          ? const Color(0x44C0D8F0)
+          : NoirColors.blackBorderSubtle,
       accent: accent,
       secondaryAccent: secondaryAccent,
       tertiaryAccent: tertiaryAccent,
-      scrim: Colors.black
-          .withValues(alpha: isWhite ? 0.18 : (isLiquidGlass ? 0.28 : 0.52)),
-      glassBlurSigma: isLiquidGlass ? 18 : 0,
+      scrim: Colors.black.withValues(alpha: isLiquidGlass ? 0.32 : 0.55),
+      glassBlurSigma: isLiquidGlass ? 18 : 14,
     );
 
     return ThemeData(
       useMaterial3: true,
-      brightness: isWhite ? Brightness.light : Brightness.dark,
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: canvas,
       colorScheme: ColorScheme(
-        brightness: isWhite ? Brightness.light : Brightness.dark,
+        brightness: Brightness.dark,
         primary: accent,
-        onPrimary: isWhite ? Colors.white : Colors.black,
+        onPrimary: Colors.black,
         secondary: secondaryAccent,
-        onSecondary: isWhite ? Colors.white : Colors.black,
+        onSecondary: Colors.black,
         tertiary: tertiaryAccent,
         onTertiary: Colors.black,
-        error: isWhite ? const Color(0xFF424242) : const Color(0xFFB0B0B0),
-        onError: isWhite ? Colors.white : Colors.black,
+        error: const Color(0xFFB0B0B0),
+        onError: Colors.black,
         surface: surface,
         onSurface: textPrimary,
       ),
@@ -213,27 +182,17 @@ class NoirTheme {
       gradient: LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
-        colors: isDark
-            ? [
-                Colors.white.withValues(alpha: isHighlighted ? 0.12 : 0.07),
-                const Color(0xFF0E0E10).withValues(alpha: 0.88),
-                const Color(0xFF060608).withValues(alpha: 0.94),
-              ]
-            : [
-                Colors.white.withValues(alpha: 0.96),
-                const Color(0xFFF7F7FA).withValues(alpha: 0.90),
-                const Color(0xFFEDEDF2).withValues(alpha: 0.85),
-              ],
+        colors: [
+          Colors.white.withValues(alpha: isHighlighted ? 0.14 : 0.08),
+          const Color(0xFF0E0E12).withValues(alpha: 0.88),
+          const Color(0xFF060608).withValues(alpha: 0.94),
+        ],
         stops: const [0.0, 0.45, 1.0],
       ),
       border: Border.all(
-        color: isDark
-            ? (isHighlighted
-                ? NoirColors.blackBorder
-                : NoirColors.blackBorderSubtle)
-            : (isHighlighted
-                ? NoirColors.whiteBorder
-                : NoirColors.whiteBorderSubtle),
+        color: isHighlighted
+            ? NoirColors.blackBorder
+            : NoirColors.blackBorderSubtle,
         width: 1.0,
       ),
     );

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../providers/app_providers.dart';
-import '../../../services/ytdlp/music_service.dart';
+import '../../../services/spotify/spotify_recommendation_service.dart';
 import '../../../core/theme/noir_theme.dart';
 
 class FolderRecommendationsFooter extends ConsumerStatefulWidget {
@@ -49,31 +49,13 @@ class _FolderRecommendationsFooterState
     final results = <Song>[];
 
     try {
-      if (widget.playlistSongs.isNotEmpty) {
-        final seed = widget.playlistSongs.first;
-        final radio = await MusicServiceCharts.fetchSimilarRadioQueue(seed,
-            excludeIds: existingIds);
-        for (final s in radio) {
-          if (!existingIds.contains(s.id) && !_addedSongIds.contains(s.id)) {
-            results.add(s);
-            if (results.length >= 6) break;
-          }
+      final recs = await SpotifyRecommendationService.instance
+          .getRecommendationsForFolder(widget.playlistSongs, limit: 10);
+      for (final s in recs) {
+        if (!existingIds.contains(s.id) && !_addedSongIds.contains(s.id)) {
+          results.add(s);
+          if (results.length >= 8) break;
         }
-        if (results.length < 4) {
-          final query = '${seed.artist} top songs';
-          final more = await MusicService.search(query).catchError((_) => <Song>[]);
-          for (final s in more) {
-            if (!existingIds.contains(s.id) &&
-                !_addedSongIds.contains(s.id) &&
-                !results.any((r) => r.id == s.id)) {
-              results.add(s);
-              if (results.length >= 6) break;
-            }
-          }
-        }
-      } else {
-        final trending = await MusicService.fetchTrendingFeed().catchError((_) => <Song>[]);
-        results.addAll(trending.take(6));
       }
     } catch (_) {}
 

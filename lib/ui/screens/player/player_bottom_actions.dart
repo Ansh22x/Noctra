@@ -33,11 +33,11 @@ class PlayerBottomActions extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.auto_awesome,
+                Icon(Icons.podcasts_rounded,
                     size: 14, color: tokens.secondaryAccent),
                 const SizedBox(width: 6),
                 Text(
-                  context.tr(L10nKeys.aiRadio),
+                  'Spotify Radio',
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,

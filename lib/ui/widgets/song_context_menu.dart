@@ -139,9 +139,9 @@ class SongContextMenu extends ConsumerWidget {
             ),
             _menuTile(
               context, isDark,
-              icon: Icons.auto_awesome_rounded,
-              title: NoctraLocalization.tr('ai_radio'),
-              subtitle: NoctraLocalization.tr('ai_radio_title'),
+              icon: Icons.podcasts_rounded,
+              title: 'Spotify Radio',
+              subtitle: 'Spotify recommendation station',
               onTap: () {
                 Navigator.of(context).pop();
                 showModalBottomSheet(

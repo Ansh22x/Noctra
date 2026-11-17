@@ -1,6 +1,6 @@
 //! Axum REST API Routes for Noctra Native Sidecar.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use axum::{
@@ -22,7 +22,7 @@ use crate::services::{
     jiosaavn::{get_jiosaavn_trending, search_jiosaavn_music},
     lyrics::fetch_lyrics,
     musicbrainz::enrich_metadata,
-    spotify::{get_dynamic_spotify_charts, SPOTIFY_CHARTS},
+    spotify::{get_dynamic_spotify_charts, get_spotify_recommendations, SPOTIFY_CHARTS},
 };
 
 pub struct AppState {
@@ -82,6 +82,7 @@ pub fn create_router() -> Router {
         .route("/api/trending", get(trending_handler))
         .route("/api/vibe_feed", get(vibe_feed_handler))
         .route("/api/ai_radio", get(ai_radio_handler))
+        .route("/api/spotify/recommendations", get(spotify_recommendations_handler))
         .route("/api/vibe_curate", post(vibe_curate_handler))
         .route("/api/spotify/charts", get(spotify_charts_handler))
         .route("/api/spotify/oembed", get(spotify_oembed_handler))
@@ -195,76 +196,52 @@ async fn vibe_feed_handler(
     }))
 }
 
+async fn spotify_recommendations_handler(
+    State(state): State<Arc<AppState>>,
+    Query(params): Query<HashMap<String, String>>,
+) -> impl IntoResponse {
+    let seed_artists = params.get("seed_artists").map(|s| s.as_str());
+    let seed_tracks = params.get("seed_tracks").map(|s| s.as_str());
+    let seed_genres = params.get("seed_genres").map(|s| s.as_str());
+    let limit = bounded_limit(&params, 20);
+
+    let tracks = get_spotify_recommendations(&state.client, seed_artists, seed_tracks, seed_genres, limit).await;
+    Json(json!({"results": tracks, "count": tracks.len()}))
+}
+
 async fn ai_radio_handler(
     State(state): State<Arc<AppState>>,
     Query(params): Query<HashMap<String, String>>,
 ) -> impl IntoResponse {
     let title = params.get("title").map(|s| s.trim()).unwrap_or("");
     let artist = params.get("artist").map(|s| s.trim()).unwrap_or("");
-    let limit = bounded_limit(&params, 15);
+    let limit = bounded_limit(&params, 20);
 
     if title.is_empty() && artist.is_empty() {
         return Json(json!({"results": []}));
     }
 
-    let re_noise = regex::Regex::new(r"[\(\[\{].*?[\)\]\}]").unwrap();
-    let re_keywords = regex::Regex::new(r"\b(official|video|audio|lyric|lyrics|remix|lofi|slowed|reverb|hd|4k)\b").unwrap();
+    // Spotify recommendation engine query
+    let recs = get_spotify_recommendations(
+        &state.client,
+        if !artist.is_empty() { Some(artist) } else { None },
+        None,
+        None,
+        limit,
+    ).await;
 
-    let norm_title = |t: &str| -> String {
-        let lower = t.to_lowercase();
-        let clean = re_noise.replace_all(&lower, "");
-        let clean = re_keywords.replace_all(&clean, "");
-        clean.split_whitespace().collect::<Vec<_>>().join(" ")
-    };
+    if !recs.is_empty() {
+        return Json(json!({"results": recs}));
+    }
 
-    let seed_norm = norm_title(title);
-    let mut queries = Vec::new();
-    if !artist.is_empty() {
-        queries.push(format!("{} top songs", artist));
-        queries.push(format!("{} radio", artist));
+    // Fallback: search query
+    let query = if !artist.is_empty() {
+        format!("{} radio", artist)
     } else {
-        queries.push(format!("{} similar songs", title));
-    }
-
-    let mut all_results = Vec::new();
-    let mut seen_ids = HashSet::new();
-    let mut seen_norms = HashSet::new();
-    if !seed_norm.is_empty() {
-        seen_norms.insert(seed_norm.clone());
-    }
-
-    for q in queries {
-        let fetched = search_jiosaavn_music(&state.client, &q, 12).await;
-        for t in fetched {
-            let tid = t.get("id").and_then(|id| id.as_str()).unwrap_or("");
-            let ttitle = t.get("title").and_then(|tt| tt.as_str()).unwrap_or("");
-            if tid.is_empty() || seen_ids.contains(tid) {
-                continue;
-            }
-            let cn = norm_title(ttitle);
-            if !cn.is_empty() && seen_norms.contains(&cn) {
-                continue;
-            }
-            if !cn.is_empty() {
-                seen_norms.insert(cn);
-            }
-            seen_ids.insert(tid.to_string());
-            all_results.push(t);
-        }
-        if all_results.len() >= limit * 2 {
-            break;
-        }
-    }
-
-    let rerank_query = if !artist.is_empty() {
-        format!("{} style", artist)
-    } else {
-        title.to_string()
+        format!("{} mix", title)
     };
-    let ranked = hybrid_dense_rag_rerank(&rerank_query, all_results, None);
-    let final_res: Vec<Value> = ranked.into_iter().take(limit).collect();
-
-    Json(json!({"results": final_res}))
+    let fetched = search_jiosaavn_music(&state.client, &query, limit).await;
+    Json(json!({"results": fetched}))
 }
 
 async fn vibe_curate_handler(
@@ -282,19 +259,29 @@ async fn vibe_curate_handler(
         .unwrap_or(12)
         .clamp(1, 50);
 
-    let taste_vec = payload.get("userTasteVector").and_then(|v| {
-        v.as_array().map(|arr| {
-            arr.iter()
-                .filter_map(|val| val.as_f64())
-                .collect::<Vec<f64>>()
-        })
-    });
+    let genre_seed = match vibe.to_lowercase().as_str() {
+        v if v.contains("chill") || v.contains("night") || v.contains("ambient") => "chill,ambient",
+        v if v.contains("party") || v.contains("club") || v.contains("dance") => "dance,electronic",
+        v if v.contains("workout") || v.contains("gym") || v.contains("energy") => "workout,hip-hop",
+        v if v.contains("rock") || v.contains("metal") => "rock,metal",
+        v if v.contains("bollywood") || v.contains("desi") => "bollywood,indian",
+        _ => "pop,dance",
+    };
 
-    let candidates = search_jiosaavn_music(&state.client, vibe, limit * 2).await;
-    let ranked = hybrid_dense_rag_rerank(vibe, candidates, taste_vec.as_deref());
-    let final_res: Vec<Value> = ranked.into_iter().take(limit).collect();
+    let recs = get_spotify_recommendations(
+        &state.client,
+        None,
+        None,
+        Some(genre_seed),
+        limit,
+    ).await;
 
-    Json(json!({"results": final_res, "vibe": vibe}))
+    if !recs.is_empty() {
+        return Json(json!({"results": recs, "vibe": vibe}));
+    }
+
+    let candidates = search_jiosaavn_music(&state.client, vibe, limit).await;
+    Json(json!({"results": candidates, "vibe": vibe}))
 }
 
 async fn spotify_charts_handler(

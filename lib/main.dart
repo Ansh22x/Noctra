@@ -2,18 +2,15 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audio_service/audio_service.dart';
-import 'package:dynamic_color/dynamic_color.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/theme/noir_theme.dart';
 import 'services/platform/dynamic_icon_service.dart';
 import 'core/networking/network_quality.dart';
 import 'core/utils/noctra_logger.dart';
 import 'core/utils/playback_settings_store.dart';
-import 'services/ai/implicit_signal_tracker.dart';
 import 'core/utils/permission_helper.dart';
 import 'data/repositories/music_repository.dart';
 import 'data/sources/noctra_local_database.dart';
-import 'data/repositories/neural_recommender_engine.dart';
 import 'providers/app_providers.dart';
 import 'services/audio/audio_player_service.dart';
 import 'services/audio/stream_quality_service.dart';
@@ -109,23 +106,9 @@ void main() async {
       'Network quality init error',
       () => NetworkQualityService.instance.start(),
     ),
-    _guarded(
-      'Neural model restore error',
-      () => NeuralRecommenderEngine.restoreFromDatabase(),
-    ),
     _guarded('Repository init error', () async {
       final repo = MusicRepository();
       await repo.init();
-      // Route strong positive taste signals (favorite / playlist-add) from the
-      // repository to the AI signal tracker. Attached here — the composition
-      // layer — because lib/data must not import lib/services/ai directly.
-      repo.onFavoriteToggled =
-          (song) => ImplicitSignalTracker().trackFavorite(song);
-      repo.onSongAddedToFolder =
-          (song) => ImplicitSignalTracker().trackPlaylistAdd(song);
-      // Deliberate offline-save is also a strong positive signal.
-      repo.onSongDownloadedCallback =
-          (song) => ImplicitSignalTracker().trackDownload(song);
     }),
     _guarded('Dynamic icon init error', DynamicIconService.init),
   ]);
@@ -235,51 +218,43 @@ class _NoctraAppState extends ConsumerState<NoctraApp> {
     });
 
     final activeThemeData = NoirTheme.getTheme(themeMode);
-    return DynamicColorBuilder(
-      builder: (lightDynamic, darkDynamic) {
-        // Capture the OS dynamic palette once so Material U can read it
-        // from anywhere without rebuilding the whole tree.
-        MaterialUSchemeHolder.light = lightDynamic;
-        MaterialUSchemeHolder.dark = darkDynamic;
-        return MaterialApp(
-          title: 'Noctra',
-          locale: Locale(currentLanguage),
-          debugShowCheckedModeBanner: false,
-          theme: activeThemeData,
-          darkTheme: activeThemeData,
-          themeMode: themeMode.isDark ? ThemeMode.dark : ThemeMode.light,
-          navigatorObservers: [appRouteObserver],
-          builder: (context, child) {
-            final textDir = NoctraLocalization.textDirection(currentLanguage);
-            return NoctraLocalizationScope(
-              languageCode: currentLanguage,
-              child: Directionality(
-                textDirection: textDir,
-                child: DesktopKeyboardShortcuts(
-                  child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
-                ),
-              ),
-            );
-          },
-          home: AnimatedSwitcher(
-            duration: const Duration(milliseconds: 600),
-            switchInCurve: Curves.easeOutCubic,
-            switchOutCurve: Curves.easeInCubic,
-            child: isInitialized
-                ? (hasCompletedOnboarding
-                    ? const MainNavigationShell()
-                    : const OnboardingScreen())
-                : SplashScreen(
-                    onInitialized: () async {
-                      try {
-                        await PermissionHelper.requestStoragePermissions();
-                      } catch (_) {}
-                      ref.read(appInitializedProvider.notifier).state = true;
-                    },
-                  ),
+    return MaterialApp(
+      title: 'Noctra',
+      locale: Locale(currentLanguage),
+      debugShowCheckedModeBanner: false,
+      theme: activeThemeData,
+      darkTheme: activeThemeData,
+      themeMode: ThemeMode.dark,
+      navigatorObservers: [appRouteObserver],
+      builder: (context, child) {
+        final textDir = NoctraLocalization.textDirection(currentLanguage);
+        return NoctraLocalizationScope(
+          languageCode: currentLanguage,
+          child: Directionality(
+            textDirection: textDir,
+            child: DesktopKeyboardShortcuts(
+              child: NoctraThemeBackdrop(child: child ?? const SizedBox.shrink()),
+            ),
           ),
         );
       },
+      home: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 600),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        child: isInitialized
+            ? (hasCompletedOnboarding
+                ? const MainNavigationShell()
+                : const OnboardingScreen())
+            : SplashScreen(
+                onInitialized: () async {
+                  try {
+                    await PermissionHelper.requestStoragePermissions();
+                  } catch (_) {}
+                  ref.read(appInitializedProvider.notifier).state = true;
+                },
+              ),
+      ),
     );
   }
 }

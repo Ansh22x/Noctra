@@ -99,11 +99,12 @@ void main() {
       expect(NoctraLocalDatabase.normalizeThemeMode(null), 'noirBlack');
     });
 
-    test('valid themes noirWhite and liquidGlass are preserved', () {
-      expect(NoctraLocalDatabase.normalizeThemeMode('noirWhite'), 'noirWhite');
+    test('liquidGlass is preserved and legacy themes normalize to noirBlack', () {
+      expect(NoctraLocalDatabase.normalizeThemeMode('noirWhite'), 'noirBlack');
       expect(NoctraLocalDatabase.normalizeThemeMode('liquidGlass'), 'liquidGlass');
       expect(NoctraLocalDatabase.normalizeThemeMode('liquid_glass'), 'liquidGlass');
-      expect(NoctraLocalDatabase.normalizeThemeMode('light'), 'noirWhite');
+      expect(NoctraLocalDatabase.normalizeThemeMode('light'), 'noirBlack');
+      expect(NoctraLocalDatabase.normalizeThemeMode('materialU'), 'noirBlack');
     });
   });
 

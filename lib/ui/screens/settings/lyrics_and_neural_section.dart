@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/utils/playback_settings_store.dart';
-import '../../../data/repositories/neural_recommender_engine.dart';
-import '../../../data/repositories/taste_vector_engine.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
-import '../../widgets/neural_mini_chart.dart';
 import '../../../core/theme/noir_theme.dart';
 
 class LyricsAndNeuralSection extends ConsumerWidget {
@@ -33,7 +30,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
         const SizedBox(height: 8),
         GlassCard(
           radius: 16,
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           child: Column(
             children: [
               _lyricsRadio(
@@ -49,7 +46,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
         ),
         const SizedBox(height: 18),
         Text(
-          'NEURAL RECOMMENDATION ENGINE',
+          'SPOTIFY RECOMMENDATION ENGINE',
           style: TextStyle(
             fontSize: 10.5,
             fontWeight: FontWeight.w700,
@@ -64,32 +61,15 @@ class LyricsAndNeuralSection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _nnStat(context, 'Training Steps',
-                  '${NeuralRecommenderEngine.totalTrainSteps}', isDark),
+              _engineStat(context, 'Recommendation Engine', 'Spotify Web API & Native Rust', isDark),
               const SizedBox(height: 6),
-              _nnStat(
-                  context,
-                  'Running Accuracy',
-                  '${(NeuralRecommenderEngine.accuracy * 100).toStringAsFixed(1)}%',
-                  isDark),
+              _engineStat(context, 'Discovery Mode', 'Dynamic Acoustic Vibe Graph', isDark),
               const SizedBox(height: 6),
-              _nnStat(
-                  context,
-                  'Average Loss',
-                  NeuralRecommenderEngine.averageLoss.toStringAsFixed(4),
-                  isDark),
+              _engineStat(context, 'Authentication', 'Zero-Key Public Anonymous', isDark),
               const SizedBox(height: 10),
-              SizedBox(
-                height: 40,
-                child: NeuralMiniChart(
-                  lossHistory: NeuralRecommenderEngine.lossHistory,
-                  isDark: isDark,
-                ),
-              ),
-              const SizedBox(height: 8),
               Text(
-                'The neural network learns from your listening patterns in real-time. '
-                'More training steps = better recommendations.',
+                'Recommendations and radio stations are dynamically generated using Spotify\'s '
+                'official recommendation algorithms and curated catalog charts.',
                 style: TextStyle(
                   fontSize: 11,
                   color: t.tertiaryText,
@@ -98,23 +78,18 @@ class LyricsAndNeuralSection extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? const Color(0x1AFFFFFF)
-                      : const Color(0x0D000000),
+                  color: isDark ? const Color(0x1AFFFFFF) : const Color(0x0D000000),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.psychology_rounded,
-                        size: 14,
-                        color: t.secondaryText),
+                    Icon(Icons.graphic_eq_rounded, size: 14, color: t.accent),
                     const SizedBox(width: 6),
                     Text(
-                      'Your Profile: ${TasteVectorEngine.calculateArchetype(ref.read(musicRepositoryProvider).userTasteVector)}',
+                      'Spotify Recommendation Graph • Active',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
@@ -156,9 +131,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
             Icon(
               isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
               size: 18,
-              color: isSelected
-                  ? (t.primaryText)
-                  : (t.tertiaryText),
+              color: isSelected ? (t.primaryText) : (t.tertiaryText),
             ),
           ],
         ),
@@ -166,7 +139,7 @@ class LyricsAndNeuralSection extends ConsumerWidget {
     );
   }
 
-  Widget _nnStat(BuildContext context, String label, String value, bool isDark) {
+  Widget _engineStat(BuildContext context, String label, String value, bool isDark) {
     final t = context.noctraTokens;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

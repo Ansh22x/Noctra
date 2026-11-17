@@ -18,12 +18,8 @@ void main() {
     NoctraThemeTokens tokensOf(NoirThemeMode mode) =>
         NoirTheme.getTheme(mode).extension<NoctraThemeTokens>()!;
 
-    test('Noir Black accent is pure white', () {
-      expect(tokensOf(NoirThemeMode.noirBlack).accent, const Color(0xFFFFFFFF));
-    });
-
-    test('Noir White accent is pure black', () {
-      expect(tokensOf(NoirThemeMode.noirWhite).accent, const Color(0xFF000000));
+    test('Glassmorphic Black accent is pure white', () {
+      expect(tokensOf(NoirThemeMode.glassmorphicBlack).accent, const Color(0xFFFFFFFF));
     });
 
     test('Liquid Glass accent is the glass blue, not white/black', () {
@@ -32,8 +28,7 @@ void main() {
     });
 
     test('only Liquid Glass marks the scene as liquid glass', () {
-      expect(NoirThemeMode.noirBlack.isLiquidGlass, isFalse);
-      expect(NoirThemeMode.noirWhite.isLiquidGlass, isFalse);
+      expect(NoirThemeMode.glassmorphicBlack.isLiquidGlass, isFalse);
       expect(NoirThemeMode.liquidGlass.isLiquidGlass, isTrue);
     });
   });

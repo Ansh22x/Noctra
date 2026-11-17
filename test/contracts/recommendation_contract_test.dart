@@ -1,7 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:noctra/features/recommendations/domain/recommendation_repository_contract.dart';
-import 'package:noctra/services/ai/candidate_retrieval_service.dart';
-import 'package:noctra/services/metadata/deezer_audio_features_service.dart';
 import 'package:noctra/shared/models/models.dart';
 
 class FakeRecommendationRepository implements RecommendationRepositoryContract {
@@ -17,16 +15,11 @@ class FakeRecommendationRepository implements RecommendationRepositoryContract {
     int targetCount = 15,
     bool preferDeepCuts = false,
   }) async {
-    final raw = await CandidateRetrievalService.curatePersonalizedFeed(
-      vibeKey: vibeKey,
-      naturalPrompt: naturalPrompt,
-      seedSong: seedSong,
-      targetCount: targetCount,
-      preferDeepCuts: preferDeepCuts,
-      poolOverride: cannedPool,
-      featureFetcher: (t, a) async => const AudioFeatures(),
-    );
-    return raw.map((m) => CuratedCandidate.fromMap(m)).toList();
+    return cannedPool.take(targetCount).map((s) => CuratedCandidate(
+          song: s,
+          score: 0.95,
+          matchReason: 'Spotify Recommendation ($vibeKey)',
+        )).toList();
   }
 
   @override

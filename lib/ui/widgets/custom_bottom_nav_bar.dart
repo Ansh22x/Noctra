@@ -58,15 +58,6 @@ class CustomBottomNavBar extends ConsumerWidget {
               NoctraLocalization.tr('library'),
               currentIndex == 2,
               isDark),
-          _navItem(
-              context,
-              ref,
-              3,
-              Icons.auto_awesome_rounded,
-              Icons.auto_awesome_outlined,
-              NoctraLocalization.tr('ai_studio'),
-              currentIndex == 3,
-              isDark),
         ],
       ),
     );

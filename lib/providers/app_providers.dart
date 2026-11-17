@@ -15,7 +15,7 @@ import '../services/audio/audio_player_service.dart';
 import '../services/audio/audio_router_service.dart';
 import '../services/p2p/p2p_sync_service.dart';
 import '../services/ytdlp/music_service.dart';
-import '../services/ai/candidate_retrieval_service.dart';
+import '../services/spotify/spotify_recommendation_service.dart';
 import '../services/discovery/catalog_discovery_service.dart';
 import '../data/models/stream_metadata_model.dart';
 import 'offline_mode_provider.dart';
@@ -58,20 +58,13 @@ Future<void> refreshHomeFeeds(WidgetRef ref) async {
   ref.invalidate(dynamicSpotifyChartsProvider);
 }
 
-// Theme state with persistent storage
+// Theme state with persistent storage (Glassmorphic Black & Liquid Glass)
 final themeModeProvider = StateProvider<NoirThemeMode>((ref) {
   final saved = NoctraLocalDatabase().getCachedThemeMode();
-  if (saved == 'noirWhite' || saved == 'light') {
-    return NoirThemeMode.noirWhite;
-  }
   if (saved == 'liquidGlass' || saved == 'liquid_glass') {
     return NoirThemeMode.liquidGlass;
   }
-  if (saved == 'materialU') {
-    return NoirThemeMode.materialU;
-  }
-  // Migrate removed noirAmoled to noirBlack
-  return NoirThemeMode.noirBlack;
+  return NoirThemeMode.glassmorphicBlack;
 });
 
 // App Icon state (independent of theme, synced from DynamicIconService)
@@ -286,13 +279,20 @@ final curatedRecommendationsProvider =
   return repo.curateByVibe(vibeKey: vibe, naturalPrompt: prompt);
 });
 
-// AI Agent Dynamic Recommendations Future Provider (Two-Stage Neural MLP + MMR)
+// Spotify Dynamic Recommendations Future Provider
 final aiAgentMixProvider =
     FutureProvider<List<Map<String, dynamic>>>((ref) async {
-  final prompt = ref.watch(aiPromptProvider);
-  final vibe = ref.watch(selectedVibeKeyProvider);
-  return CandidateRetrievalService.curatePersonalizedFeed(
-      vibeKey: vibe, naturalPrompt: prompt);
+  final vibe = ref.watch(selectedVibeKeyProvider) ?? 'late_night';
+  final songs = await SpotifyRecommendationService.instance
+      .getRecommendationsForVibe(vibe);
+  return songs
+      .map((s) => {
+            'song': s,
+            'score': 95,
+            'matchPercentage': 95,
+            'explanation': 'Curated via Spotify recommendation graph',
+          })
+      .toList();
 });
 
 

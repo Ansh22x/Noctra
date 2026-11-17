@@ -18,10 +18,8 @@ class SidebarThemeCard extends ConsumerWidget {
       child: GestureDetector(
         onTap: () {
           final next = switch (themeMode) {
-            NoirThemeMode.noirBlack => NoirThemeMode.noirWhite,
-            NoirThemeMode.noirWhite => NoirThemeMode.liquidGlass,
-            NoirThemeMode.liquidGlass => NoirThemeMode.materialU,
-            NoirThemeMode.materialU => NoirThemeMode.noirBlack,
+            NoirThemeMode.glassmorphicBlack => NoirThemeMode.liquidGlass,
+            NoirThemeMode.liquidGlass => NoirThemeMode.glassmorphicBlack,
           };
           ref.read(themeModeProvider.notifier).state = next;
         },
@@ -31,9 +29,7 @@ class SidebarThemeCard extends ConsumerWidget {
           child: Row(
             children: [
               Icon(
-                themeMode.isDark
-                    ? Icons.nightlight_round
-                    : Icons.light_mode_rounded,
+                Icons.nightlight_round,
                 size: 18,
                 color: tokens.accent,
               ),
@@ -54,10 +50,8 @@ class SidebarThemeCard extends ConsumerWidget {
                     const SizedBox(height: 2),
                     Text(
                       switch (themeMode) {
-                        NoirThemeMode.noirBlack => 'Noir Black',
-                        NoirThemeMode.noirWhite => 'Noir White',
+                        NoirThemeMode.glassmorphicBlack => 'Glassmorphic Black',
                         NoirThemeMode.liquidGlass => 'Liquid Glass',
-                        NoirThemeMode.materialU => 'Material U',
                       },
                       style: TextStyle(
                         fontSize: 13,

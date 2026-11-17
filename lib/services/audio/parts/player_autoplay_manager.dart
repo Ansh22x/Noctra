@@ -122,10 +122,6 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
         ? DateTime.now().difference(start).inSeconds
         : fallbackSec;
     if (_currentSong != null) {
-      ImplicitSignalTracker().trackPlaybackEnd(
-          song: _currentSong!,
-          listenedSeconds: playedSec,
-          totalDuration: _currentSong!.duration);
       NoctraLocalDatabase().recordManifest(_currentSong!,
           action: 'complete', listenedSeconds: playedSec);
 
@@ -153,9 +149,6 @@ mixin PlayerAutoplayMixin on AudioPlayerServiceBase {
     }
 
     if (_loopMode == LoopMode.one && _currentSong != null) {
-      // The user let the track finish AND wants it again — a genuine replay
-      // signal the recommender previously never received.
-      ImplicitSignalTracker().trackReplay(_currentSong!);
       await _player.seek(Duration.zero);
       _playNonBlocking(_player, 'LoopMode.one replay');
     } else if (_loopMode == LoopMode.off &&

@@ -167,9 +167,9 @@ class _ArtistProfileHeaderState extends ConsumerState<ArtistProfileHeader> {
                       borderRadius: BorderRadius.circular(14),
                     ),
                   ),
-                  icon: const Icon(Icons.auto_awesome, size: 16),
+                  icon: const Icon(Icons.podcasts_rounded, size: 16),
                   label: const Text(
-                    'AI Radio',
+                    'Spotify Radio',
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
                   ),
                   onPressed: tracks.isEmpty

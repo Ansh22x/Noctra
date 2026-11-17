@@ -50,7 +50,7 @@ class _QueueSheetState extends ConsumerState<QueueSheet> {
   Widget build(BuildContext context) {
     final t = context.noctraTokens;
     final themeMode = ref.watch(themeModeProvider);
-    final isDark = themeMode != NoirThemeMode.noirWhite;
+    final isDark = themeMode.isDark;
     final player = ref.watch(audioPlayerServiceProvider);
 
     final queue = player.queue;

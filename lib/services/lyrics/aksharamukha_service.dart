@@ -1,8 +1,9 @@
+import '../rust/noctra_rust_bridge.dart';
 import 'akshara_engine.dart';
 import 'sanscript_engine.dart';
 
 /// AksharamukhaService: Fully offline, zero-latency script conversion engine
-/// backed by [AksharaEngine] canonical phonetic matrix and [SanscriptEngine].
+/// backed by native Rust romanizer, [AksharaEngine] canonical phonetic matrix and [SanscriptEngine].
 class AksharamukhaService {
   AksharamukhaService._();
 
@@ -33,6 +34,17 @@ class AksharamukhaService {
     final cacheKey = '$sourceScript:$targetScript:${text.trim()}';
     if (_cache.containsKey(cacheKey)) {
       return _cache[cacheKey]!;
+    }
+
+    final targetLower = targetScript.toLowerCase();
+    if (targetLower == 'iast' || targetLower == 'latin' || targetLower == 'english') {
+      if (NoctraRustBridge.instance.isAvailable) {
+        final rustRomanized = NoctraRustBridge.instance.romanizeText(text);
+        if (rustRomanized != null && rustRomanized.isNotEmpty) {
+          _saveToCache(cacheKey, rustRomanized);
+          return rustRomanized;
+        }
+      }
     }
 
     String result;

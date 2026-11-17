@@ -22,9 +22,9 @@ void main() {
     });
 
     test('dispatches ChangeThemeCommand to registered callback', () async {
-      final result1 = await router.execute(const ChangeThemeCommand('noir_white'));
+      final result1 = await router.execute(const ChangeThemeCommand('glassmorphic_black'));
       expect(result1, isA<AssistantSuccess>());
-      expect(changedTheme, equals(NoirThemeMode.noirWhite));
+      expect(changedTheme, equals(NoirThemeMode.glassmorphicBlack));
 
       final result2 = await router.execute(const ChangeThemeCommand('liquid_glass'));
       expect(result2, isA<AssistantSuccess>());
@@ -32,12 +32,15 @@ void main() {
 
       final result3 = await router.execute(const ChangeThemeCommand('noir_black'));
       expect(result3, isA<AssistantSuccess>());
-      expect(changedTheme, equals(NoirThemeMode.noirBlack));
+      expect(changedTheme, equals(NoirThemeMode.glassmorphicBlack));
     });
 
     test('rejects unknown theme mode with AssistantInvalidCommand', () async {
       final result = await router.execute(const ChangeThemeCommand('amoled_neon'));
       expect(result, isA<AssistantInvalidCommand>());
+
+      final resultWhite = await router.execute(const ChangeThemeCommand('noir_white'));
+      expect(resultWhite, isA<AssistantInvalidCommand>());
     });
 
     test('executes ClearQueueCommand safely', () async {

@@ -125,10 +125,6 @@ mixin PlayerPlaybackMixin on AudioPlayerServiceBase {
         _songStartTime = null;
         if (start != null) {
           final playedSec = DateTime.now().difference(start).inSeconds;
-          ImplicitSignalTracker().trackPlaybackEnd(
-              song: _currentSong!,
-              listenedSeconds: playedSec,
-              totalDuration: _currentSong!.duration);
           NoctraLocalDatabase().recordManifest(_currentSong!,
               action: playedSec < 15 ? 'skip' : 'play',
               listenedSeconds: playedSec);

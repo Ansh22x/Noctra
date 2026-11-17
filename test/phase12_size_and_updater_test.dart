@@ -82,7 +82,7 @@ void main() {
       expect(db.getCachedThemeMode(), 'noirBlack');
     });
 
-    test('liquidGlass and noirWhite themes are preserved intact', () async {
+    test('liquidGlass theme is preserved intact', () async {
       SharedPreferences.setMockInitialValues({
         'noctra_theme_mode': 'liquidGlass',
       });

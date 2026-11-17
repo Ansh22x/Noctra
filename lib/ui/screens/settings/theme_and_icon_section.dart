@@ -38,23 +38,13 @@ class ThemeAndIconSection extends ConsumerWidget {
           child: Row(
             children: [
               Expanded(
-                child: _themeChip(context, ref, 'Noir Black',
-                    NoirThemeMode.noirBlack, themeMode),
+                child: _themeChip(context, ref, 'Glassmorphic Black',
+                    NoirThemeMode.glassmorphicBlack, themeMode),
               ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _themeChip(context, ref, 'Noir White',
-                    NoirThemeMode.noirWhite, themeMode),
-              ),
-              const SizedBox(width: 6),
+              const SizedBox(width: 8),
               Expanded(
                 child: _themeChip(context, ref, 'Liquid Glass',
                     NoirThemeMode.liquidGlass, themeMode),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _themeChip(context, ref, 'Material U',
-                    NoirThemeMode.materialU, themeMode),
               ),
             ],
           ),
@@ -81,23 +71,13 @@ class ThemeAndIconSection extends ConsumerWidget {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: _iconChip(context, ref, 'Noir Black',
+                child: _iconChip(context, ref, 'Glassmorphic Black',
                     NoctraAppIcon.noirBlack),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _iconChip(context, ref, 'Noir White',
-                    NoctraAppIcon.noirWhite),
               ),
               const SizedBox(width: 6),
               Expanded(
                 child: _iconChip(context, ref, 'Liquid Glass',
                     NoctraAppIcon.liquidGlass),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: _iconChip(context, ref, 'Material U',
-                    NoctraAppIcon.materialU),
               ),
             ],
           ),

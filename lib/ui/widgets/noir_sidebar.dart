@@ -121,18 +121,6 @@ class NoirSidebar extends ConsumerWidget {
                         onClose?.call();
                       },
                     ),
-                    SidebarItem(
-                      icon: Icons.auto_awesome_rounded,
-                      label: NoctraLocalization.tr('ai_studio_title'),
-                      isSelected: currentIndex == 3,
-                      isDark: isDark,
-                      onTap: () {
-                        ref
-                            .read(currentNavigationIndexProvider.notifier)
-                            .state = 3;
-                        onClose?.call();
-                      },
-                    ),
                     const SizedBox(height: 8),
                     Divider(
                         color: isDark ? Colors.white10 : Colors.black12,
@@ -230,7 +218,7 @@ class NoirSidebar extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
               child: Text(
-                'On-Device Knowledge Graph • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
+                'Music Library • ${repo.downloads.length + repo.favorites.length + repo.recentlyPlayed.length} tracks',
                 style: TextStyle(
                   fontSize: 10,
                   color: t.tertiaryText,

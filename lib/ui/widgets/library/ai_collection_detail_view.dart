@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/song_model.dart';
 import '../../../data/repositories/music_repository.dart';
 import '../../../providers/app_providers.dart';
-import '../../../services/ai/ai_mix_track_source.dart';
+import '../../../services/audio/playlist_remix_source.dart';
 import '../noir_mini_player_dock.dart';
 import 'ai_collection_action_bar.dart';
 import 'ai_collection_song_row.dart';
@@ -116,7 +116,7 @@ class _AiCollectionDetailViewState
     final pool = _resolvedPool;
     if (pool != null && pool.length >= 2) {
       setState(() {
-        _tracks = AiMixTrackSource.applyRemixOrder(pool,
+        _tracks = PlaylistRemixSource.applyRemixOrder(pool,
             previousIds: _previousIds, epoch: _epoch, vibeKey: widget.vibeKey);
       });
       return;
@@ -126,7 +126,7 @@ class _AiCollectionDetailViewState
 
   Future<List<Song>> _defaultLoader(String vibeKey,
       {List<String>? previousIds, int? epoch}) {
-    return AiMixTrackSource.resolveTracks(widget.repo, vibeKey: vibeKey);
+    return PlaylistRemixSource.resolveTracks(widget.repo, vibeKey: vibeKey);
   }
 
   void _playAll() {

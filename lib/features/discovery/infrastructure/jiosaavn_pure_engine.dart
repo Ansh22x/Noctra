@@ -4,19 +4,24 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/crypto/des_cipher.dart';
 import '../../../core/networking/network_quality.dart';
+import '../../../services/rust/noctra_rust_bridge.dart';
 
-/// Pure-Dart cross-platform JioSaavn resolution engine.
-/// Runs natively on Android, Windows, Linux, macOS, iOS, and Web with zero native bridging.
+/// Pure-Dart cross-platform JioSaavn resolution engine with native Rust acceleration.
+/// Runs natively on Android, Windows, Linux, macOS, iOS, and Web.
 class JioSaavnPureEngine {
   static const String _desKey = '38346591';
 
-  /// Decrypts a JioSaavn encrypted media url into a direct 320kbps CDN stream url.
+  /// Decrypts a JioSaavn encrypted media url into a direct 320kbps CDN stream url using native Rust or Dart fallback.
   static String? decryptMediaUrl(String? encryptedMediaUrl) {
     if (encryptedMediaUrl == null || encryptedMediaUrl.trim().isEmpty) {
       return null;
     }
     try {
-      var rawUrl = DesCipher.decryptBase64String(encryptedMediaUrl, _desKey);
+      String? rawUrl;
+      if (NoctraRustBridge.instance.isAvailable) {
+        rawUrl = NoctraRustBridge.instance.decryptJioSaavn(encryptedMediaUrl);
+      }
+      rawUrl ??= DesCipher.decryptBase64String(encryptedMediaUrl, _desKey);
       if (rawUrl == null || rawUrl.isEmpty) return null;
       rawUrl = rawUrl.trim();
 

@@ -80,7 +80,7 @@ class _AIRadioSheetState extends ConsumerState<AIRadioSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'AI Similarity Radio Station',
+                      'Spotify Recommendation Radio',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

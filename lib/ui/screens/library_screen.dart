@@ -7,7 +7,6 @@ import '../../providers/app_providers.dart';
 import '../widgets/synccast_sheet.dart';
 import '../widgets/library_folders_tab.dart';
 import '../widgets/library_all_songs_tab.dart';
-import '../widgets/library_ai_mixes_tab.dart';
 import 'migration_screen.dart';
 
 class LibraryScreen extends ConsumerStatefulWidget {
@@ -23,7 +22,7 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -141,9 +140,8 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
                   unselectedLabelColor: t.secondaryText,
                   labelStyle: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700),
                   tabs: [
-                    Tab(text: context.tr(L10nKeys.aiMixes)),
                     Tab(text: context.tr(L10nKeys.folders)),
-                    Tab(text: context.tr(L10nKeys.downloads)),
+                    Tab(text: context.tr(L10nKeys.allSongs)),
                   ],
                 ),
               ),
@@ -156,10 +154,6 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> with SingleTicker
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  LibraryAIMixesTab(
-                    isDark: isDark,
-                    repo: repo,
-                  ),
                   LibraryFoldersTab(
                     isDark: isDark,
                     repo: repo,

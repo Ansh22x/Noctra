@@ -168,17 +168,13 @@ class AssistantContentRouter {
     final clean = themeName.toLowerCase().replaceAll(' ', '_');
     NoirThemeMode? targetMode;
 
-    if (clean.contains('white') || clean == 'noir_white') {
-      targetMode = NoirThemeMode.noirWhite;
-    } else if (clean.contains('glass') || clean == 'liquid_glass') {
+    if (clean.contains('liquid') || clean.contains('glass') || clean == 'liquid_glass') {
       targetMode = NoirThemeMode.liquidGlass;
-    } else if (clean.contains('material') || clean.contains('you')) {
-      targetMode = NoirThemeMode.materialU;
-    } else if (clean.contains('black') || clean == 'noir_black' || clean.contains('dark')) {
-      targetMode = NoirThemeMode.noirBlack;
+    } else if (clean.contains('black') || clean.contains('glassmorphic') || clean == 'noir_black' || clean.contains('dark')) {
+      targetMode = NoirThemeMode.glassmorphicBlack;
     } else {
       return const AssistantInvalidCommand(
-          'Unsupported theme. Supported: Noir Black, Noir White, Liquid Glass, Material U');
+          'Unsupported theme. Supported: Glassmorphic Black, Liquid Glass');
     }
 
     themeCallback?.call(targetMode);

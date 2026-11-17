@@ -15,10 +15,8 @@ class ThemeCycleButton extends ConsumerWidget {
   final bool isDesktop;
 
   static const List<NoirThemeMode> _themeCycle = [
-    NoirThemeMode.noirBlack,
-    NoirThemeMode.noirWhite,
+    NoirThemeMode.glassmorphicBlack,
     NoirThemeMode.liquidGlass,
-    NoirThemeMode.materialU,
   ];
 
   const ThemeCycleButton({
@@ -39,20 +37,14 @@ class ThemeCycleButton extends ConsumerWidget {
 
     final themeName = switch (themeMode) {
       NoirThemeMode.liquidGlass => 'Liquid Glass',
-      NoirThemeMode.noirWhite => 'Noir White',
-      NoirThemeMode.materialU => 'Material U',
-      NoirThemeMode.noirBlack => 'Noir Black',
+      NoirThemeMode.glassmorphicBlack => 'Glassmorphic Black',
     };
 
     final icon = switch (themeMode) {
       NoirThemeMode.liquidGlass =>
         GlassShardIcon(size: 16, color: t.accent, isActive: true) as Widget,
-      NoirThemeMode.materialU => Icon(Icons.palette_outlined,
-          size: 16, color: t.secondaryText),
-      _ => Icon(
-          themeMode.isWhite
-              ? Icons.light_mode_outlined
-              : Icons.dark_mode_outlined,
+      NoirThemeMode.glassmorphicBlack => Icon(
+          Icons.dark_mode_outlined,
           size: 16,
           color: t.secondaryText),
     };
