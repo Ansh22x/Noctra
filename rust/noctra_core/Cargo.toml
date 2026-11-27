@@ -1,6 +1,6 @@
 [package]
 name = "noctra_core"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2021"
 authors = ["Ansh22x <https://github.com/Ansh22x>", "GuruMachanica <https://github.com/GuruMachanica>"]
 description = "Native Rust DSP audio engine, multi-source music resolver, and high-performance FFI core for Noctra."

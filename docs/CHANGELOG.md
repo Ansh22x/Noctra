@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.0.3 (2026-11-27)
+
+### WhisperX + Genius Synchronized Lyrics
+- **Genius Lyrics Provider**: Added zero-key Genius public search and balanced-container HTML lyrics extraction (with optional Genius API token support).
+- **WhisperX Forced Alignment**: Added `WhisperXSyncService` supporting forced alignment of Genius/plain lyrics to audio timestamps via a WhisperX HTTP sidecar (`tool/whisperx_server.py`) or desktop CLI fallback, plus on-demand **WhisperX Sync** in the Lyrics view.
+
+### Non-English Song Translation
+- **Automatic & On-Demand Translation**: Added `LyricsTranslationService` with non-English language detection (both non-Latin scripts and Latin-script languages) and batched English translation for both synced and plain-text lyrics.
+- **Lyrics UI & Settings**: Added **Translate** toggle and source indicator chips in `LyricsView`, line-by-line plain-text translation display, and persisted WhisperX/Genius/translation controls in Settings.
+
 ## v1.0.2 (2026-11-17)
 
 ### Streamlined Architecture & Codebase Pruning

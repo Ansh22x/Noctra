@@ -4,6 +4,7 @@ import '../../../core/utils/playback_settings_store.dart';
 import '../../../providers/app_providers.dart';
 import '../../../shared/widgets/glass_card.dart';
 import '../../../core/theme/noir_theme.dart';
+import 'whisperx_genius_settings_card.dart';
 
 class LyricsAndNeuralSection extends ConsumerWidget {
   final bool isDark;
@@ -44,6 +45,8 @@ class LyricsAndNeuralSection extends ConsumerWidget {
             ],
           ),
         ),
+        const SizedBox(height: 18),
+        const WhisperXGeniusSettingsCard(),
         const SizedBox(height: 18),
         Text(
           'SPOTIFY RECOMMENDATION ENGINE',

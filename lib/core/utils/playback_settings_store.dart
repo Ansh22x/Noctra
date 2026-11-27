@@ -26,6 +26,10 @@ class PlaybackSettingsStore {
   static const _kNormalizeVolume = 'noctra_setting_normalize_volume';
   static const _kGapless = 'noctra_setting_gapless';
   static const _kLyricsPref = 'noctra_setting_lyrics_preference';
+  static const _kWhisperxEnabled = 'noctra_setting_whisperx_enabled';
+  static const _kWhisperxEndpoint = 'noctra_setting_whisperx_endpoint';
+  static const _kGeniusApiToken = 'noctra_setting_genius_token';
+  static const _kAutoTranslate = 'noctra_setting_auto_translate_lyrics';
   static const _kHomeSections = 'noctra_setting_home_sections';
 
   bool fadeEnabled = true;
@@ -41,6 +45,10 @@ class PlaybackSettingsStore {
   bool normalizeVolume = true;
   bool gaplessPlayback = true;
   String lyricsPreference = 'English / Global (Standard)';
+  bool whisperxEnabled = true;
+  String whisperxEndpoint = 'http://127.0.0.1:8765';
+  String geniusApiToken = '';
+  bool autoTranslateNonEnglish = true;
 
   /// Home-screen section visibility (declutter). Keys are section ids used
   /// by HomeScreen; anything missing from the stored map defaults to shown,
@@ -75,6 +83,11 @@ class PlaybackSettingsStore {
       gaplessPlayback = prefs.getBool(_kGapless) ?? true;
       lyricsPreference =
           prefs.getString(_kLyricsPref) ?? 'English / Global (Standard)';
+      whisperxEnabled = prefs.getBool(_kWhisperxEnabled) ?? true;
+      whisperxEndpoint =
+          prefs.getString(_kWhisperxEndpoint) ?? 'http://127.0.0.1:8765';
+      geniusApiToken = prefs.getString(_kGeniusApiToken) ?? '';
+      autoTranslateNonEnglish = prefs.getBool(_kAutoTranslate) ?? true;
       final rawSections = prefs.getString(_kHomeSections);
       if (rawSections != null && rawSections.isNotEmpty) {
         try {
@@ -106,6 +119,10 @@ class PlaybackSettingsStore {
     bool? normalizeVolume,
     bool? gaplessPlayback,
     String? lyricsPreference,
+    bool? whisperxEnabled,
+    String? whisperxEndpoint,
+    String? geniusApiToken,
+    bool? autoTranslateNonEnglish,
     Map<String, bool>? homeSections,
   }) {
     if (fadeEnabled != null) this.fadeEnabled = fadeEnabled;
@@ -123,6 +140,12 @@ class PlaybackSettingsStore {
     if (normalizeVolume != null) this.normalizeVolume = normalizeVolume;
     if (gaplessPlayback != null) this.gaplessPlayback = gaplessPlayback;
     if (lyricsPreference != null) this.lyricsPreference = lyricsPreference;
+    if (whisperxEnabled != null) this.whisperxEnabled = whisperxEnabled;
+    if (whisperxEndpoint != null) this.whisperxEndpoint = whisperxEndpoint;
+    if (geniusApiToken != null) this.geniusApiToken = geniusApiToken;
+    if (autoTranslateNonEnglish != null) {
+      this.autoTranslateNonEnglish = autoTranslateNonEnglish;
+    }
     if (homeSections != null) this.homeSections = homeSections;
     unawaitedPersist();
   }
@@ -143,6 +166,10 @@ class PlaybackSettingsStore {
     await prefs.setBool(_kNormalizeVolume, normalizeVolume);
     await prefs.setBool(_kGapless, gaplessPlayback);
     await prefs.setString(_kLyricsPref, lyricsPreference);
+    await prefs.setBool(_kWhisperxEnabled, whisperxEnabled);
+    await prefs.setString(_kWhisperxEndpoint, whisperxEndpoint);
+    await prefs.setString(_kGeniusApiToken, geniusApiToken);
+    await prefs.setBool(_kAutoTranslate, autoTranslateNonEnglish);
     if (homeSections.isNotEmpty) {
       await prefs.setString(
           _kHomeSections, const JsonEncoder().convert(homeSections));

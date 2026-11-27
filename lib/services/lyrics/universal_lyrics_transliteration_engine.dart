@@ -55,6 +55,8 @@ class UniversalLyricsTransliterationEngine {
         plainText: convertedLines.map((l) => l.text).join('\n'),
         lines: convertedLines,
         isSynced: true,
+        source: lyrics.source,
+        translatedPlainText: lyrics.translatedPlainText,
       );
     } else {
       final convertedText = transliterateText(lyrics.plainText, targetScript);
@@ -62,6 +64,8 @@ class UniversalLyricsTransliterationEngine {
         plainText: convertedText,
         lines: const [],
         isSynced: false,
+        source: lyrics.source,
+        translatedPlainText: lyrics.translatedPlainText,
       );
     }
   }
