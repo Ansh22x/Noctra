@@ -6,6 +6,7 @@ import 'package:noctra/data/models/song_model.dart';
 import 'package:noctra/services/lyrics/lyrics_service.dart';
 import 'package:noctra/services/lyrics/lyrics_translation_service.dart';
 import 'package:noctra/services/lyrics/parts/lyrics_genius_provider.dart';
+import 'package:noctra/services/lyrics/parts/lyrics_provider_fallback.dart';
 import 'package:noctra/services/lyrics/parts/lyrics_whisperx_provider.dart';
 
 void main() {
@@ -252,6 +253,38 @@ void main() {
 
       expect(translated.isSynced, isFalse);
       expect(translated.translatedPlainText, 'Hello my heart\nUnder the sky');
+    });
+  });
+
+  group('AZLyrics Fallback Provider', () {
+    test('fetchAzLyrics extracts UTF-8 Spanish lyrics cleanly', () async {
+      final client = MockClient((req) async {
+        expect(req.url.toString(),
+            'https://www.azlyrics.com/lyrics/anuelaa/sexonama.html');
+        return http.Response.bytes(
+          utf8.encode('''
+            <div>
+              <!-- Usage of azlyrics.com content by any third-party lyrics provider is prohibited by our licensing agreement. Sorry about that. -->
+              Ey<br>
+              Tú quieres sexo na&#39; má&#39;, los dos bien loco&#39;<br>
+              Ya tengo el alma rota, nadie está hablando de amar<br>
+              Diablo, pórtate mal, que te quiero castigar<br>
+            </div>
+          '''),
+          200,
+        );
+      });
+
+      final data = await LyricsProviderFallback.fetchAzLyrics(
+        'Sexo Nama',
+        'Sexo Nama',
+        'Anuel Aa',
+        client: client,
+      );
+
+      expect(data, isNotNull);
+      expect(data!.source, 'azlyrics');
+      expect(data.plainText, contains("Tú quieres sexo na' má'"));
     });
   });
 }

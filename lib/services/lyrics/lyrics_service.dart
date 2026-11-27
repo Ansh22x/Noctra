@@ -155,6 +155,11 @@ class LyricsService {
           song.title,
           cleanTitle,
           primaryArtist,
+        ) ??
+        await LyricsProviderFallback.fetchAzLyrics(
+          song.title,
+          cleanTitle,
+          primaryArtist,
         );
     if (plainFallback != null) {
       if (useWhisperX && !plainFallback.isSynced) {

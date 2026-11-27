@@ -175,4 +175,70 @@ class LyricsProviderFallback {
     } catch (_) {}
     return null;
   }
+
+  /// Zero-key fallback using AZLyrics deterministic artist/title URLs
+  /// (e.g. `https://www.azlyrics.com/lyrics/anuelaa/sexonama.html`).
+  static Future<LyricsData?> fetchAzLyrics(
+    String rawTitle,
+    String cleanTitle,
+    String primaryArtist, {
+    http.Client? client,
+  }) async {
+    final httpClient = client ?? http.Client();
+    final ownsClient = client == null;
+    try {
+      final artistSlug = _azSlug(primaryArtist);
+      if (artistSlug.isEmpty) return null;
+      final candidates = <String>{
+        _azSlug(cleanTitle),
+        _azSlug(rawTitle),
+      }..removeWhere((s) => s.isEmpty);
+
+      for (final titleSlug in candidates) {
+        final uri = Uri.parse(
+            'https://www.azlyrics.com/lyrics/$artistSlug/$titleSlug.html');
+        final res = await httpClient.get(uri, headers: const {
+          'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                  '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        }).timeout(const Duration(seconds: 6));
+        if (res.statusCode != 200) continue;
+
+        final html = utf8.decode(res.bodyBytes, allowMalformed: true);
+        final extracted = extractAzLyricsFromHtml(html);
+        if (extracted.isNotEmpty && LyricsMatcher.isValidLyrics(extracted)) {
+          return LyricsData(
+            isSynced: false,
+            lines: const [],
+            plainText: extracted,
+            source: 'azlyrics',
+          );
+        }
+      }
+    } catch (_) {} finally {
+      if (ownsClient) httpClient.close();
+    }
+    return null;
+  }
+
+  static String _azSlug(String s) =>
+      s.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+  static String extractAzLyricsFromHtml(String html) {
+    final m = RegExp(
+      r'<!--\s*Usage of azlyrics\.com content by any third-party[\s\S]*?-->([\s\S]*?)</div>',
+      caseSensitive: false,
+    ).firstMatch(html);
+    if (m == null) return '';
+    return m
+        .group(1)!
+        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+        .replaceAll(RegExp(r'<[^>]+>'), '')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&apos;', "'")
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
+  }
 }
