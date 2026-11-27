@@ -141,6 +141,10 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
         _lineKeys.clear();
       }
     });
+    final msg = synced != null
+        ? 'Synced lyrics via ${synced.source.toUpperCase()}'
+        : 'WhisperX sidecar unreachable (${ref.read(whisperxEndpointProvider)}). Run tool/whisperx_server.py or set URL in Settings.';
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   void _resetStateForNewSong() {
@@ -222,8 +226,11 @@ class _LyricsViewState extends ConsumerState<LyricsView> {
           return LyricsLoadingState(isDark: isDark);
         }
         final rawData = _overrideData ?? snapshot.data ?? LyricsData.empty();
-        final options =
-            UniversalLyricsTransliterationEngine.getAvailableScriptOptions(rawData);
+        final isEmpty = rawData.plainText == LyricsData.empty().plainText &&
+            rawData.lines.isEmpty;
+        final options = isEmpty
+            ? const <ScriptOption>[]
+            : UniversalLyricsTransliterationEngine.getAvailableScriptOptions(rawData);
         var data = rawData;
         try {
           data = UniversalLyricsTransliterationEngine.transliterateLyrics(

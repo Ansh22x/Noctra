@@ -94,11 +94,82 @@ class LyricsProviderFallback {
                     .trim();
                 if (clean.isNotEmpty && LyricsMatcher.isValidLyrics(clean)) {
                   return LyricsData(
-                      isSynced: false, lines: const [], plainText: clean);
+                      isSynced: false,
+                      lines: const [],
+                      plainText: clean,
+                      source: 'jiosaavn');
                 }
               }
             }
           }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Zero-key fallback using Letras.mus.br (strong Latin, Spanish, Portuguese,
+  /// and English catalog, no Cloudflare challenge).
+  static Future<LyricsData?> fetchLetrasLyrics(
+      String rawTitle, String cleanTitle, String primaryArtist) async {
+    try {
+      final q = '${cleanTitle.isNotEmpty ? cleanTitle : rawTitle} $primaryArtist'
+          .trim();
+      if (q.isEmpty) return null;
+      final searchUri = Uri.parse(
+        'https://solr.sscdn.co/letras/m1/?q=${Uri.encodeComponent(q)}&wt=json',
+      );
+      final sRes = await http
+          .get(searchUri, headers: const {'User-Agent': 'Mozilla/5.0'})
+          .timeout(const Duration(seconds: 5));
+      if (sRes.statusCode != 200) return null;
+
+      var body = sRes.body.trim();
+      if (body.startsWith('LetrasSug(') && body.endsWith(')')) {
+        body = body.substring('LetrasSug('.length, body.length - 1);
+      }
+      final decoded = jsonDecode(body);
+      final docs = (decoded['response']?['docs'] as List?) ?? const [];
+      for (final doc in docs) {
+        if (doc is! Map) continue;
+        final dns = doc['dns']?.toString() ?? '';
+        final urlSlug = doc['url']?.toString() ?? '';
+        final docTitle = doc['txt']?.toString() ?? doc['full_txt']?.toString() ?? '';
+        final docArtist = doc['art']?.toString() ?? '';
+        if (dns.isEmpty || urlSlug.isEmpty) continue;
+        final titleOk = LyricsMatcher.titlesMatch(rawTitle, docTitle) ||
+            LyricsMatcher.titlesMatch(cleanTitle, docTitle);
+        final artistOk = primaryArtist.isEmpty ||
+            LyricsMatcher.artistMatches(primaryArtist, docArtist);
+        if (!titleOk || !artistOk) continue;
+
+        final pageUri = Uri.parse('https://www.letras.mus.br/$dns/$urlSlug/');
+        final pRes = await http
+            .get(pageUri, headers: const {'User-Agent': 'Mozilla/5.0'})
+            .timeout(const Duration(seconds: 5));
+        if (pRes.statusCode != 200) continue;
+
+        final m = RegExp(
+          r'<div[^>]*class="lyric-original[^"]*"[^>]*>([\s\S]*?)</div>',
+          caseSensitive: false,
+        ).firstMatch(pRes.body);
+        if (m == null) continue;
+        final clean = m.group(1)!
+            .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+            .replaceAll(RegExp(r'</p>', caseSensitive: false), '\n\n')
+            .replaceAll(RegExp(r'<[^>]+>'), '')
+            .replaceAll('&amp;', '&')
+            .replaceAll('&quot;', '"')
+            .replaceAll('&#39;', "'")
+            .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+            .trim();
+        if (clean.isNotEmpty && LyricsMatcher.isValidLyrics(clean)) {
+          return LyricsData(
+            isSynced: false,
+            lines: const [],
+            plainText: clean,
+            source: 'letras',
+          );
         }
       }
     } catch (_) {}

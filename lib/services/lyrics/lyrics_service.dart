@@ -142,11 +142,16 @@ class LyricsService {
       return finalize(geniusLyrics);
     }
 
-    // Tier 6: Unsynced fallbacks from earlier tiers + JioSaavn
+    // Tier 6: Unsynced fallbacks from earlier tiers + JioSaavn + Letras
     final plainFallback = lrclibResult ??
         mmLyrics ??
         ytLyrics ??
         await LyricsProviderFallback.fetchJioSaavnLyrics(
+          song.title,
+          cleanTitle,
+          primaryArtist,
+        ) ??
+        await LyricsProviderFallback.fetchLetrasLyrics(
           song.title,
           cleanTitle,
           primaryArtist,
